@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Portal 按需页面挂载样例</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        header {
+            background: #ffffff;
+            padding: 20px 40px;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }
+
+        p.desc {
+            margin: 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 40px;
+            gap: 24px;
+            overflow: hidden;
+        }
+
+        /* 外部业务侧边栏 */
+        .sidebar {
+            width: 300px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .sidebar h2 {
+            font-size: 16px;
+            margin: 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        /* 控制区域 */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .control-group p {
+            margin: 0;
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.5;
+        }
+
+        button.primary {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button.primary:hover {
+            background: #1d4ed8;
+        }
+
+        button.primary:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        button.danger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: none;
+        }
+
+        button.danger:hover {
+            background: #dc2626;
+        }
+
+        /* Portal 承载区 */
+        .portal-board {
+            flex: 1;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 2px dashed #cbd5e1;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .portal-board.active {
+            border: 2px solid transparent;
+        }
+
+        .placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #94a3b8;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .placeholder-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        /* 这是真正的渲染挂载点 */
+        #lowcode-portal-anchor {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            /* 给挂载的页面滚动能力 */
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>第三方业务系统 - 动态微前端挂载演示</h1>
+        <p class="desc">
+            此示例演示了如何通过 <code>cdp-sdk</code> 向当前所在的主应用发起跨域渲染请求，在第三方系统（当前 iframe）特定的 DOM 节点中按需挂载低代码面板下的任何微页面片段。
+        </p>
+    </header>
+
+    <div class="main-container">
+        <!-- 侧边栏/控制面板 -->
+        <div class="sidebar">
+            <h2>外部业务控制台</h2>
+
+            <div class="control-group">
+                <p>
+                    <strong>目标面板 (Panel):</strong> IML_00009<br />
+                    <strong>目标页面 (Page):</strong> 销售阶段配置<br />
+                    <strong>渲染容器:</strong> #lowcode-portal-anchor
+                </p>
+
+                <!-- 挂载按钮 -->
+                <button id="btn-mount" class="primary">一键挂载低代码页面</button>
+
+                <!-- 卸载按钮 -->
+                <button id="btn-unmount" class="danger">销毁该页面实例</button>
+            </div>
+
+            <div style="font-size: 12px; color: #94a3b8; margin-top: auto;">
+                ✨ 提示：挂载的页面享有主应用提供的一切低代码上下文环境，且生命周期归外部框架完全掌控。
+            </div>
+        </div>
+
+        <!-- 中间大画板：承接低代码页面的虫洞口 -->
+        <div class="portal-board" id="board-container">
+            <div class="placeholder" id="placeholder">
+                <div class="placeholder-icon">🕳️</div>
+                <div>等候从主应用挂载页面到此处</div>
+            </div>
+
+            <!-- 这里就是我们要传入的选择器匹配的节点 -->
+            <div id="lowcode-portal-anchor"></div>
+        </div>
+    </div>
+
+    <!-- 业务核心脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnMount = document.getElementById('btn-mount');
+            const btnUnmount = document.getElementById('btn-unmount');
+            const placeholder = document.getElementById('placeholder');
+            const boardContainer = document.getElementById('board-container');
+
+            // 存放暴露出来的卸载句柄闭包
+            let unmountTargetPage = null;
+
+            // ==========================================
+            // 挂载逻辑
+            // ==========================================
+            btnMount.addEventListener('click', async () => {
+                // 读取当前环境的 SDK 引用 (假设由 CDP 环境或者 iframe srcdoc 自动注入)
+                const sdk = window.semApp?.cdpSdk;
+
+                if (!sdk) {
+                    alert('未检测到 cdp-sdk 环境。请确保此样例在低代码开发台的 CustomShell 环境中运行。');
+                    return;
+                }
+
+                try {
+                    // UI：按钮进入 Loading 态
+                    btnMount.disabled = true;
+                    btnMount.textContent = '正在穿越虫洞进行挂载...';
+
+                    /**
+                     * ⚡️ 核心 API: 按需挂载页面
+                     * 
+                     * sdk.controllers.portal.mountPage(panelCode, pageId, containerSelector)
+                     */
+                    const unmountFn = await sdk.controllers.portal.mountPage(
+                        {
+                            panelCode: 'IML_00009',            // 目标面板 Code
+                            pageId: '销售阶段配置',     // 目标页面 ID
+                            containerId: '#lowcode-portal-anchor',
+                            // formMode: 'view', // 表单模式
+                            // pageInitialData: {}, // 初始数据
+                            // pageInputs: {} // 参数
+                        } // 挂载到本 HTML 内的哪个 DOM 上
+                    );
+
+                    // 保存卸载句柄
+                    unmountTargetPage = unmountFn;
+
+                    // UI：切换为挂载成功的状态
+                    placeholder.style.display = 'none';
+                    boardContainer.classList.add('active');
+                    btnMount.style.display = 'none';
+                    btnUnmount.style.display = 'block';
+
+                    // 顺便利用 sdk 发个全屏通知，体验更棒
+                    if (typeof sdk.toast === 'function') {
+                        sdk.toast('跨面板页面加载完毕！', { type: 'success' });
+                    }
+
+                } catch (error) {
+                    console.error('挂载页面失败:', error);
+                    alert(`页面挂载失败：${error.message}`);
+
+                    // 恢复按钮状态
+                    btnMount.disabled = false;
+                    btnMount.textContent = '一键挂载低代码页面';
+                }
+            });
+
+            // ==========================================
+            // 卸载逻辑
+            // ==========================================
+            btnUnmount.addEventListener('click', async () => {
+                try {
+                    if (unmountTargetPage) {
+                        // ⚡️ 核心 API: 执行释放闭包，向主应用发出卸载销毁请求
+                        await unmountTargetPage();
+
+                        // 清理闭包
+                        unmountTargetPage = null;
+
+                        // UI：恢复初始状态
+                        placeholder.style.display = 'block';
+                        boardContainer.classList.remove('active');
+                        btnUnmount.style.display = 'none';
+                        btnMount.style.display = 'block';
+                        btnMount.disabled = false;
+                        btnMount.textContent = '一键挂载低代码页面';
+
+                        const sdk = window.semApp?.cdpSdk;
+                        if (sdk && typeof sdk.toast === 'function') {
+                            sdk.toast('该低代码页面组件及内存已销毁。', { type: 'info' });
+                        }
+                    }
+                } catch (error) {
+                    console.error('卸载页面发生异常:', error);
+                    alert(`页面卸载失败：${error.message}`);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

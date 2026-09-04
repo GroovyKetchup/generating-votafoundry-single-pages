@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDP-SDK 示例 8-1：表格页订阅全局事件</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 32px; background: #f5f7fb; color: #1f2937; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+        .page { max-width: 960px; margin: 0 auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 8px 30px rgba(15, 23, 42, .08); }
+        h1 { margin: 0 0 8px; font-size: 24px; }
+        .hint { margin: 0 0 24px; color: #64748b; line-height: 1.7; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        button { border: 0; border-radius: 6px; padding: 9px 16px; color: #fff; background: #2563eb; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+        th { background: #f8fafc; color: #475569; font-size: 13px; }
+        td { font-size: 14px; }
+        .status { min-height: 22px; margin-top: 16px; color: #15803d; font-size: 13px; }
+        code { padding: 2px 5px; border-radius: 4px; background: #eef2ff; color: #4338ca; }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <h1>8-1 表格页：订阅全局事件</h1>
+        <p class="hint">
+            表格页打开同一个 Panel 下的 <code>表单</code> 编辑表单页，并订阅表单保存事件。
+            表单保存成功后发送事件，表格页收到事件后刷新对应行。
+        </p>
+
+        <div class="toolbar">
+            <strong>订单列表</strong>
+            <button id="refreshButton" type="button">刷新表格</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>订单号</th>
+                    <th>客户名称</th>
+                    <th>金额</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        <div id="statusMessage" class="status"></div>
+    </main>
+
+    <script>
+        const EVENT_TYPE = 'example:record-saved';
+        const FORM_PAGE_ID = '表单';
+        let rows = [
+            { id: 'A-1001', customerName: '星河科技', amount: 1280, status: '待处理' },
+            { id: 'A-1002', customerName: '远山贸易', amount: 2560, status: '处理中' }
+        ];
+        let unsubscribe = () => {};
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[char]);
+        }
+
+        function renderTable() {
+            document.getElementById('tableBody').innerHTML = rows.map(row => `
+                <tr>
+                    <td>${escapeHtml(row.id)}</td>
+                    <td>${escapeHtml(row.customerName)}</td>
+                    <td>¥ ${Number(row.amount).toFixed(2)}</td>
+                    <td>${escapeHtml(row.status)}</td>
+                    <td><button type="button" data-id="${escapeHtml(row.id)}">编辑</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function showStatus(message) {
+            document.getElementById('statusMessage').textContent = message;
+        }
+
+        async function openEditForm(row) {
+            const sdk = window.semApp?.cdpSdk;
+            if (!sdk) return showStatus('CDP-SDK 未加载');
+
+            try {
+                await sdk.ui.modal.open({
+                    // 两个页面在同一个 Panel，只指定目标 pageId，不需要 panelCode。
+                    pageId: FORM_PAGE_ID,
+                    mode: 'edit',
+                    title: `编辑订单 ${row.id}`,
+                    height: 600,
+                    width: 640,
+                    data: row
+                });
+                // 不在这里刷新，统一由全局事件订阅处理。
+            } catch (error) {
+                console.error('打开编辑表单失败:', error);
+                showStatus('打开编辑表单失败');
+            }
+        }
+
+        function init() {
+            const sdk = window.semApp?.cdpSdk;
+            if (!sdk) return showStatus('CDP-SDK 未加载');
+
+            // 只接收来自 8-2 编辑表单页的保存事件；不需要指定 panelCode。
+            unsubscribe = sdk.app.globalEvent.on(
+                EVENT_TYPE,
+                (event) => {
+                    rows = rows.map(row => row.id === event.id ? {
+                        id: event.id,
+                        customerName: event.customerName,
+                        amount: event.amount,
+                        status: event.status
+                    } : row);
+                    renderTable();
+                    showStatus(`已根据全局事件刷新订单 ${event.id}`);
+                },
+                { sourceFilter: { pageId: FORM_PAGE_ID } }
+            );
+
+            document.getElementById('tableBody').addEventListener('click', event => {
+                const button = event.target.closest('button[data-id]');
+                if (!button) return;
+                const row = rows.find(item => item.id === button.dataset.id);
+                if (row) void openEditForm(row);
+            });
+
+            document.getElementById('refreshButton').addEventListener('click', () => {
+                renderTable();
+                showStatus('表格已刷新');
+            });
+
+            renderTable();
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+        window.addEventListener('beforeunload', () => unsubscribe());
+    </script>
+</body>
+
+</html>

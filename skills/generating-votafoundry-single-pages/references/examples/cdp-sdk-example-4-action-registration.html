@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDP-SDK 示例 4: 动作注册 - 任务管理应用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--card-bg, white);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            color: var(--text-primary, #333);
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary, #666);
+            font-size: 14px;
+        }
+
+        .card {
+            background: var(--card-bg, white);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card h2 {
+            color: var(--text-primary, #333);
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            background: var(--info-bg, #f8f9fa);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color, #667eea);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .task-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-item.completed {
+            opacity: 0.6;
+            border-left-color: #28a745;
+        }
+
+        .task-item.completed .task-title {
+            text-decoration: line-through;
+        }
+
+        .task-content {
+            flex: 1;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: var(--text-primary, #333);
+            margin-bottom: 5px;
+        }
+
+        .task-meta {
+            font-size: 12px;
+            color: var(--text-secondary, #666);
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text-primary, #333);
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-tertiary, #999);
+            font-size: 14px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: var(--info-bg, #f8f9fa);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color, #667eea);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary, #666);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-high {
+            background: #fee;
+            color: #c00;
+        }
+
+        .badge-medium {
+            background: #ffeaa7;
+            color: #856404;
+        }
+
+        .badge-low {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 任务管理应用</h1>
+            <p class="subtitle">演示如何使用 CDP-SDK 注册动作,让 AI 智能体可以管理任务</p>
+        </div>
+
+        <div class="card">
+            <h2>📊 连接状态</h2>
+            <div id="status" class="status info">正在初始化 CDP-SDK...</div>
+        </div>
+
+        <div class="card">
+            <h2>📈 统计信息</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalTasks">0</div>
+                    <div class="stat-label">总任务数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="completedTasks">0</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="pendingTasks">0</div>
+                    <div class="stat-label">待处理</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>➕ 创建新任务</h2>
+            <div class="input-group">
+                <label>任务标题</label>
+                <input type="text" id="taskTitle" placeholder="例如: 完成项目文档">
+            </div>
+            <div class="input-group">
+                <label>任务描述</label>
+                <textarea id="taskDescription" placeholder="详细描述任务内容..."></textarea>
+            </div>
+            <div class="input-group">
+                <label>优先级</label>
+                <select id="taskPriority">
+                    <option value="low">低</option>
+                    <option value="medium" selected>中</option>
+                    <option value="high">高</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="createTaskManually()">创建任务</button>
+        </div>
+
+        <div class="card">
+            <h2>📝 任务列表</h2>
+            <ul class="task-list" id="taskList">
+                <div class="empty-state">暂无任务,创建一个开始吧!</div>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>🧪 测试 AI 调用</h2>
+            <p style="margin-bottom: 15px; color: var(--text-secondary, #666); font-size: 13px;">
+                💡 提示: 这些按钮模拟 AI 智能体调用已注册的动作。在实际使用中,用户可以通过自然语言让 AI 执行这些操作。
+            </p>
+            <div class="button-group">
+                <button class="btn-info" onclick="testGetAllTasks()">获取所有任务</button>
+                <button class="btn-success" onclick="testCreateTask()">AI 创建任务</button>
+                <button class="btn-warning" onclick="testUpdateTask()">AI 更新任务</button>
+                <button class="btn-danger" onclick="testDeleteTask()">AI 删除任务</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+        ==========================================
+        SDK 引入
+        ==========================================
+        注意: 如果此页面是通过 ExternalPage 组件(面板网页)嵌入的,
+        CDP 会自动注入 SDK,无需手动引入下面的 script 标签。
+        
+        如果是其他外部链接嵌入的页面,需要手动引入:
+    -->
+    <!-- <script src="https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/cdp-sdk-1.4.1.min.js"></script> -->
+
+    <!-- 
+        ==========================================
+        CDP-SDK 动作注册完整指南
+        ==========================================
+        
+        本示例演示如何将你的 Web 应用功能注册到 CDP 平台,让 AI 智能体可以调用。
+        
+        核心步骤:
+        1. 定义业务逻辑和数据模型
+        2. 创建动作处理器 (actionHandlers)
+        3. 定义动作元数据 (actionDefinitions)
+        4. 编写操作指南 (actionGuidance)
+        5. 注册动作到 CDP (setActions)
+        
+        ==========================================
+    -->
+
+    <script>
+        // ==========================================
+        // Step 1: 定义数据模型和业务逻辑
+        // ==========================================
+        // 这是你的应用数据,可以是任何业务数据
+        let tasks = [];
+        let nextId = 1;
+
+        function updateStats() {
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.completed).length;
+            const pending = total - completed;
+
+            document.getElementById('totalTasks').textContent = total;
+            document.getElementById('completedTasks').textContent = completed;
+            document.getElementById('pendingTasks').textContent = pending;
+        }
+
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+
+            if (tasks.length === 0) {
+                taskList.innerHTML = '<div class="empty-state">暂无任务,创建一个开始吧!</div>';
+                return;
+            }
+
+            taskList.innerHTML = tasks.map(task => {
+                const priorityBadge = {
+                    high: '<span class="badge badge-high">高优先级</span>',
+                    medium: '<span class="badge badge-medium">中优先级</span>',
+                    low: '<span class="badge badge-low">低优先级</span>'
+                }[task.priority];
+
+                return `
+                    <li class="task-item ${task.completed ? 'completed' : ''}">
+                        <div class="task-content">
+                            <div class="task-title">${task.title}${priorityBadge}</div>
+                            <div class="task-meta">${task.description || '无描述'}</div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-success btn-small" onclick="toggleTask(${task.id})">
+                                ${task.completed ? '取消完成' : '完成'}
+                            </button>
+                            <button class="btn-danger btn-small" onclick="deleteTask(${task.id})">删除</button>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+
+            updateStats();
+        }
+
+        function createTask(title, description = '', priority = 'medium') {
+            const task = {
+                id: nextId++,
+                title,
+                description,
+                priority,
+                completed: false,
+                createdAt: new Date().toISOString()
+            };
+            tasks.push(task);
+            renderTasks();
+            return task;
+        }
+
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                renderTasks();
+            }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+        }
+
+        function createTaskManually() {
+            const title = document.getElementById('taskTitle').value.trim();
+            const description = document.getElementById('taskDescription').value.trim();
+            const priority = document.getElementById('taskPriority').value;
+
+            if (!title) {
+                alert('请输入任务标题');
+                return;
+            }
+
+            createTask(title, description, priority);
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskDescription').value = '';
+            document.getElementById('taskPriority').value = 'medium';
+
+            window.semApp?.cdpSdk?.toast('任务创建成功', { type: 'success' });
+        }
+
+        // ==========================================
+        // Step 2: 创建动作处理器 (Action Handlers)
+        // ==========================================
+        // 动作处理器是实际执行业务逻辑的函数
+        // 
+        // 重要规则:
+        // 1. 每个处理器都是 async 函数
+        // 2. 接收一个 params 参数对象
+        // 3. 直接返回数据,CDP 会自动包装成 {success: true, data: ...}
+        // 4. 抛出错误时,CDP 会自动包装成 {success: false, message: ...}
+        // 5. 可以调用 CDP SDK 的其他方法(如 toast)
+        //
+        // 示例结构:
+        // actionName: async (params) => {
+        //     // 1. 验证参数
+        //     if (!params.required) throw new Error('缺少必需参数');
+        //     
+        //     // 2. 执行业务逻辑
+        //     const result = doSomething(params);
+        //     
+        //     // 3. 可选:显示用户反馈
+        //     await window.semApp.cdpSdk.toast('操作成功');
+        //     
+        //     // 4. 直接返回结果数据
+        //     return result;
+        // }
+
+        const actionHandlers = {
+            getAllTasks: async () => {
+                console.log('[Action] getAllTasks called');
+
+                return {
+                    tasks: tasks,
+                    total: tasks.length,
+                    completed: tasks.filter(t => t.completed).length,
+                    pending: tasks.filter(t => !t.completed).length
+                };
+            },
+
+            getTaskById: async (params) => {
+                console.log('[Action] getTaskById called with:', params);
+
+                const { id } = params;
+                if (!id) {
+                    throw new Error('缺少必需参数: id');
+                }
+
+                const task = tasks.find(t => t.id === id);
+                if (!task) {
+                    throw new Error(`未找到 ID 为 ${id} 的任务`);
+                }
+
+                return task;
+            },
+
+            createTask: async (params) => {
+                console.log('[Action] createTask called with:', params);
+
+                const { title, description = '', priority = 'medium' } = params;
+
+                if (!title) {
+                    throw new Error('缺少必需参数: title');
+                }
+
+                const validPriorities = ['low', 'medium', 'high'];
+                if (!validPriorities.includes(priority)) {
+                    throw new Error(`优先级必须是: ${validPriorities.join(', ')}`);
+                }
+
+                const task = createTask(title, description, priority);
+
+                await window.semApp.cdpSdk.toast(`任务 "${title}" 创建成功`, {
+                    type: 'success',
+                    duration: 3000
+                });
+
+                return task;
+            },
+
+            updateTask: async (params) => {
+                console.log('[Action] updateTask called with:', params);
+
+                const { id, title, description, priority, completed } = params;
+
+                if (!id) {
+                    throw new Error('缺少必需参数: id');
+                }
+
+                const task = tasks.find(t => t.id === id);
+                if (!task) {
+                    throw new Error(`未找到 ID 为 ${id} 的任务`);
+                }
+
+                if (title !== undefined) task.title = title;
+                if (description !== undefined) task.description = description;
+                if (priority !== undefined) {
+                    const validPriorities = ['low', 'medium', 'high'];
+                    if (!validPriorities.includes(priority)) {
+                        throw new Error(`优先级必须是: ${validPriorities.join(', ')}`);
+                    }
+                    task.priority = priority;
+                }
+                if (completed !== undefined) task.completed = completed;
+
+                renderTasks();
+
+                await window.semApp.cdpSdk.toast(`任务 "${task.title}" 更新成功`, {
+                    type: 'success',
+                    duration: 3000
+                });
+
+                return task;
+            },
+
+            deleteTask: async (params) => {
+                console.log('[Action] deleteTask called with:', params);
+
+                const { id } = params;
+
+                if (!id) {
+                    throw new Error('缺少必需参数: id');
+                }
+
+                const task = tasks.find(t => t.id === id);
+                if (!task) {
+                    throw new Error(`未找到 ID 为 ${id} 的任务`);
+                }
+
+                const taskTitle = task.title;
+                deleteTask(id);
+
+                await window.semApp.cdpSdk.toast(`任务 "${taskTitle}" 已删除`, {
+                    type: 'success',
+                    duration: 3000
+                });
+
+                return { id, title: taskTitle };
+            },
+
+            completeTask: async (params) => {
+                console.log('[Action] completeTask called with:', params);
+
+                const { id } = params;
+
+                if (!id) {
+                    throw new Error('缺少必需参数: id');
+                }
+
+                const task = tasks.find(t => t.id === id);
+                if (!task) {
+                    throw new Error(`未找到 ID 为 ${id} 的任务`);
+                }
+
+                task.completed = true;
+                renderTasks();
+
+                await window.semApp.cdpSdk.toast(`任务 "${task.title}" 已标记为完成`, {
+                    type: 'success',
+                    duration: 3000
+                });
+
+                return task;
+            },
+
+            getTaskStats: async () => {
+                console.log('[Action] getTaskStats called');
+
+                return {
+                    total: tasks.length,
+                    completed: tasks.filter(t => t.completed).length,
+                    pending: tasks.filter(t => !t.completed).length,
+                    byPriority: {
+                        high: tasks.filter(t => t.priority === 'high').length,
+                        medium: tasks.filter(t => t.priority === 'medium').length,
+                        low: tasks.filter(t => t.priority === 'low').length
+                    }
+                };
+            }
+        };
+
+        // ==========================================
+        // Step 3: 定义动作元数据 (Action Definitions)
+        // ==========================================
+        // 动作定义告诉 AI 智能体:
+        // 1. 有哪些动作可用
+        // 2. 每个动作的名称、别名和描述
+        // 3. 每个动作需要什么参数
+        // 4. 哪些参数是必需的
+        // 5. 动作会返回什么结果
+        //
+        // 这些信息会被 AI 用来:
+        // - 理解你的应用能做什么
+        // - 根据用户的自然语言请求选择合适的动作
+        // - 生成正确的参数
+        // - 理解返回结果的结构
+        //
+        // 重要字段说明:
+        // - actionName: 动作的唯一标识符,必须与 actionHandlers 中的键名一致
+        // - actionAlias: 人类可读的别名,帮助 AI 理解
+        // - actionDescription: 详细描述动作的功能
+        // - actionParameterSchema: JSON Schema 格式的参数定义
+        //   - type: 必须是 'object'
+        //   - properties: 参数列表,每个参数包含 type 和 description
+        //   - required: 必需参数的名称数组
+        // - actionReturnSchema: (可选)JSON Schema 格式的返回结果定义
+        //   - type: 必须是 'object'
+        //   - properties: 返回字段列表,每个字段包含 type 和 description
+        //   - required: 必需返回字段的名称数组
+        //   - 推荐包含: success(执行状态)、message(简短信息)等标准字段
+
+        const actionDefinitions = [
+            {
+                actionName: 'getAllTasks',
+                actionAlias: '获取所有任务',
+                actionDescription: '获取任务列表,包含所有任务的详细信息和统计数据',
+                actionParameterSchema: {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                },
+                actionReturnSchema: {
+                    type: 'object',
+                    properties: {
+                        tasks: {
+                            type: 'array',
+                            description: '任务列表数组'
+                        },
+                        total: {
+                            type: 'number',
+                            description: '总任务数'
+                        },
+                        completed: {
+                            type: 'number',
+                            description: '已完成任务数'
+                        },
+                        pending: {
+                            type: 'number',
+                            description: '待处理任务数'
+                        }
+                    },
+                    required: ['tasks', 'total', 'completed', 'pending']
+                }
+            },
+            {
+                actionName: 'getTaskById',
+                actionAlias: '根据ID获取任务',
+                actionDescription: '根据任务 ID 获取单个任务的详细信息',
+                actionParameterSchema: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'number',
+                            description: '任务的唯一标识符'
+                        }
+                    },
+                    required: ['id']
+                },
+                actionReturnSchema: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'number',
+                            description: '任务ID'
+                        },
+                        title: {
+                            type: 'string',
+                            description: '任务标题'
+                        },
+                        description: {
+                            type: 'string',
+                            description: '任务描述'
+                        },
+                        priority: {
+                            type: 'string',
+                            description: '优先级'
+                        },
+                        completed: {
+                            type: 'boolean',
+                            description: '是否完成'
+                        }
+                    },
+                    required: ['id', 'title', 'priority', 'completed']
+                }
+            },
+            {
+                actionName: 'createTask',
+                actionAlias: '创建新任务',
+                actionDescription: '创建一个新的任务项',
+                actionParameterSchema: {
+                    type: 'object',
+                    properties: {
+                        title: {
+                            type: 'string',
+                            description: '任务标题(必需)'
+                        },
+                        description: {
+                            type: 'string',
+                            description: '任务的详细描述(可选)'
+                        },
+                        priority: {
+                            type: 'string',
+                            description: '任务优先级: low(低), medium(中), high(高),默认为 medium'
+                        }
+                    },
+                    required: ['title']
+                },
+                actionReturnSchema: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'number',
+                            description: '新创建任务的ID'
+                        },
+                        title: {
+                            type: 'string',
+                            description: '任务标题'
+                        },
+                        description: {
+                            type: 'string',
+                            description: '任务描述'
+                        },
+                        priority: {
+                            type: 'string',
+                            description: '优先级'
+                        },
+                        completed: {
+                            type: 'boolean',
+                            description: '完成状态'
+                        },
+                        createdAt: {
+                            type: 'string',
+                            description: '创建时间'
+                        }
+                    },
+                    required: ['id', 'title', 'priority', 'completed', 'createdAt']
+                }
+            },
+            {
+                actionName: 'updateTask',
+                actionAlias: '更新任务',
+                actionDescription: '更新现有任务的信息,可以修改标题、描述、优先级或完成状态',
+                actionParameterSchema: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'number',
+                            description: '要更新的任务 ID(必需)'
+                        },
+                        title: {
+                            type: 'string',
+                            description: '新的任务标题(可选)'
+                        },
+                        description: {
+                            type: 'string',
+                            description: '新的任务描述(可选)'
+                        },
+                        priority: {
+                            type: 'string',
+                            description: '新的优先级: low, medium, high(可选)'
+                        },
+                        completed: {
+                            type: 'boolean',
+                            description: '任务完成状态(可选)'
+                        }
+                    },
+                    required: ['id']
+                },
+                actionReturnSchema: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'number',
+                            description: '任务ID'
+                        },
+                        title: {
+                            type: 'string',
+                            description: '更新后的任务标题'
+                        },
+                        description: {
+                            type: 'string',
+                            description: '更新后的任务描述'
+                        },
+                        priority: {
+                            type: 'string',
+                            description: '更新后的优先级'
+                        },
+                        completed: {
+                            type: 'boolean',
+                            description: '更新后的完成状态'
+                        }
+                    },
+                    required: ['id', 'title', 'priority', 'completed']
+                }
+            },
+            {
+                actionName: 'deleteTask',
+                actionAlias: '删除任务',
+                actionDescription: '根据 ID 删除指定的任务',
+                actionParameterSchema: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'number',
+                            description: '要删除的任务 ID'
+                        }
+                    },
+                    required: ['id']
+                },
+                actionReturnSchema: {
+                    type: 'object',
+                    properties: {
+                        success: {
+                            type: 'boolean',
+                            description: '删除是否成功'
+                        },
+                        message: {
+                            type: 'string',
+                            description: '删除结果信息'
+                        },
+                        id: {
+                            type: 'number',
+                            description: '被删除的任务ID'
+                        },
+                        title: {
+                            type: 'string',
+                            description: '被删除的任务标题'
+                        }
+                    },
+                    required: ['success', 'message', 'id', 'title']
+                }
+            },
+            {
+                actionName: 'completeTask',
+                actionAlias: '完成任务',
+                actionDescription: '将指定任务标记为已完成',
+                actionParameterSchema: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'number',
+                            description: '要完成的任务 ID'
+                        }
+                    },
+                    required: ['id']
+                },
+                actionReturnSchema: {
+                    type: 'object',
+                    properties: {
+                        id: {
+                            type: 'number',
+                            description: '任务ID'
+                        },
+                        title: {
+                            type: 'string',
+                            description: '任务标题'
+                        },
+                        completed: {
+                            type: 'boolean',
+                            description: '完成状态(应为 true)'
+                        }
+                    },
+                    required: ['id', 'title', 'completed']
+                }
+            },
+            {
+                actionName: 'getTaskStats',
+                actionAlias: '获取任务统计',
+                actionDescription: '获取任务的统计信息,包括总数、完成数、待处理数和按优先级分组的统计',
+                actionParameterSchema: {
+                    type: 'object',
+                    properties: {},
+                    required: []
+                },
+                actionReturnSchema: {
+                    type: 'object',
+                    properties: {
+                        total: {
+                            type: 'number',
+                            description: '总任务数'
+                        },
+                        completed: {
+                            type: 'number',
+                            description: '已完成任务数'
+                        },
+                        pending: {
+                            type: 'number',
+                            description: '待处理任务数'
+                        },
+                        byPriority: {
+                            type: 'object',
+                            description: '按优先级分组的统计'
+                        }
+                    },
+                    required: ['total', 'completed', 'pending', 'byPriority']
+                }
+            }
+        ];
+
+        // ==========================================
+        // Step 4: 编写操作指南 (Action Guidance)
+        // ==========================================
+        // 操作指南是给 AI 智能体看的使用说明书,采用 Markdown 格式
+        //
+        // 目的:
+        // - 帮助 AI 理解你的应用的整体功能
+        // - 提供使用场景和示例
+        // - 说明如何组合使用多个动作
+        //
+        // 建议包含的内容:
+        // 1. 应用简介和功能特性
+        // 2. 可用操作列表(按类别分组)
+        // 3. 每个操作的调用示例
+        // 4. 常见使用场景
+        // 5. 数据结构说明
+        // 6. 注意事项
+        //
+        // 提示:
+        // - 使用清晰的标题和列表
+        // - 提供具体的调用示例
+        // - 说明参数的含义和约束
+        // - 给出实际的使用场景
+
+        const actionGuidance = `
+# 任务管理应用
+
+这是一个功能完整的任务管理应用,支持创建、查询、更新和删除任务。
+
+## 功能特性
+
+- 📝 **任务管理**: 完整的 CRUD 操作(创建、读取、更新、删除)
+- 🎯 **优先级管理**: 支持高、中、低三个优先级
+- ✅ **状态跟踪**: 跟踪任务的完成状态
+- 📊 **统计分析**: 实时统计任务数据
+
+## 可用操作
+
+### 1. 查询操作
+
+- **获取所有任务**: \`getAllTasks()\`
+  - 返回所有任务列表和统计信息
+  - 示例: "显示所有任务" / "有哪些任务"
+
+- **根据ID获取任务**: \`getTaskById({"id": 1})\`
+  - 获取指定 ID 的任务详情
+  - 示例: "查看任务 1 的详情"
+
+- **获取任务统计**: \`getTaskStats()\`
+  - 获取任务的统计数据
+  - 示例: "统计一下任务情况" / "有多少任务完成了"
+
+### 2. 创建操作
+
+- **创建新任务**: \`createTask({"title": "任务标题", "description": "任务描述", "priority": "high"})\`
+  - 必需参数: title(任务标题)
+  - 可选参数: description(描述), priority(优先级: low/medium/high)
+  - 示例: "创建一个高优先级任务:完成项目文档"
+
+### 3. 更新操作
+
+- **更新任务**: \`updateTask({"id": 1, "title": "新标题", "priority": "high"})\`
+  - 必需参数: id(任务ID)
+  - 可选参数: title, description, priority, completed
+  - 示例: "把任务 1 的优先级改为高"
+
+- **完成任务**: \`completeTask({"id": 1})\`
+  - 将任务标记为已完成
+  - 示例: "完成任务 1" / "标记任务 1 为完成"
+
+### 4. 删除操作
+
+- **删除任务**: \`deleteTask({"id": 1})\`
+  - 删除指定的任务
+  - 示例: "删除任务 1"
+
+## 使用示例
+
+### 场景 1: 创建和管理任务
+1. "创建一个任务:准备会议材料"
+2. "把这个任务的优先级设为高"
+3. "完成这个任务"
+
+### 场景 2: 查询和统计
+1. "显示所有待处理的任务"
+2. "统计一下任务完成情况"
+3. "有多少高优先级任务"
+
+### 场景 3: 批量操作
+1. "创建三个任务:写报告、发邮件、开会"
+2. "把所有高优先级任务标记为完成"
+3. "删除所有已完成的任务"
+
+## 数据结构
+
+### 任务对象
+\`\`\`json
+{
+  "id": 1,
+  "title": "任务标题",
+  "description": "任务描述",
+  "priority": "high",
+  "completed": false,
+  "createdAt": "2026-01-05T12:00:00.000Z"
+}
+\`\`\`
+
+### 优先级
+- \`high\`: 高优先级
+- \`medium\`: 中优先级(默认)
+- \`low\`: 低优先级
+
+## 注意事项
+
+1. 所有操作都会返回标准的响应格式: \`{ success: boolean, message: string, data: any }\`
+2. 任务 ID 是自动生成的唯一标识符
+3. 删除任务后无法恢复,请谨慎操作
+4. 优先级只能是 low、medium 或 high 之一
+        `.trim();
+
+        // ==========================================
+        // Step 5: 注册动作到 CDP (setActions)
+        // ==========================================
+        // 这是最关键的一步,将前面定义的所有内容注册到 CDP 平台
+        //
+        // 调用时机:
+        // - 在页面加载完成后(DOMContentLoaded)
+        // - 确保 CDP-SDK 已加载
+        // - 建议延迟 200ms 左右,确保 SDK 连接已建立
+        //
+        // setActions 参数说明:
+        // - guidance: 操作指南(Markdown 格式的字符串)
+        // - definitions: 动作定义数组
+        // - handlers: 动作处理器对象
+        // - registrationDelay: 可选,注册延迟时间(默认 100ms)
+        //
+        // 注册成功后:
+        // - AI 智能体可以看到你的应用功能
+        // - 用户可以通过自然语言调用你的动作
+        // - CDP 会自动处理参数验证和错误处理
+
+        async function init() {
+            console.log('[CDP SDK] 开始初始化...');
+
+            try {
+                if (!window.semApp || !window.semApp.cdpSdk) {
+                    throw new Error('CDP-SDK 未加载');
+                }
+
+                const initData = window.semApp.cdpSdk.getInitData();
+                console.log('[CDP SDK] 初始化数据:', initData);
+
+                await window.semApp.cdpSdk.setActions({
+                    guidance: actionGuidance,
+                    definitions: actionDefinitions,
+                    handlers: actionHandlers,
+                    registrationDelay: 100
+                });
+
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').textContent = '✅ CDP-SDK 已连接,已注册 7 个动作,AI 智能体可以管理任务了!';
+
+                console.log('[CDP SDK] ✅ 初始化完成,已注册动作:', actionDefinitions.map(d => d.actionName));
+
+                createTask('示例任务 1', '这是一个示例任务', 'high');
+                createTask('示例任务 2', '这是另一个示例任务', 'medium');
+
+            } catch (error) {
+                console.error('[CDP SDK] ❌ 初始化失败:', error);
+                document.getElementById('status').className = 'status warning';
+                document.getElementById('status').textContent = '⚠️ 初始化失败: ' + error.message;
+            }
+        }
+
+        async function testGetAllTasks() {
+            try {
+                const result = await actionHandlers.getAllTasks();
+                console.log('getAllTasks result:', result);
+                alert(`获取成功!\n总任务数: ${result.data.total}\n已完成: ${result.data.completed}\n待处理: ${result.data.pending}`);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('错误: ' + error.message);
+            }
+        }
+
+        async function testCreateTask() {
+            try {
+                const result = await actionHandlers.createTask({
+                    title: 'AI 创建的任务',
+                    description: '这是由 AI 智能体创建的任务',
+                    priority: 'high'
+                });
+                console.log('createTask result:', result);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('错误: ' + error.message);
+            }
+        }
+
+        async function testUpdateTask() {
+            if (tasks.length === 0) {
+                alert('请先创建任务');
+                return;
+            }
+            try {
+                const firstTask = tasks[0];
+                const result = await actionHandlers.updateTask({
+                    id: firstTask.id,
+                    title: firstTask.title + ' (已更新)',
+                    priority: 'high'
+                });
+                console.log('updateTask result:', result);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('错误: ' + error.message);
+            }
+        }
+
+        async function testDeleteTask() {
+            if (tasks.length === 0) {
+                alert('请先创建任务');
+                return;
+            }
+            try {
+                const lastTask = tasks[tasks.length - 1];
+                const result = await actionHandlers.deleteTask({ id: lastTask.id });
+                console.log('deleteTask result:', result);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('错误: ' + error.message);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('[App] 页面加载完成');
+            renderTasks();
+            setTimeout(init, 500);
+        });
+    </script>
+</body>
+
+</html>

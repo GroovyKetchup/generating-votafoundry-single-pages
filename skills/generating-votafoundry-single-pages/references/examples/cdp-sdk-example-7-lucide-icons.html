@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDP-SDK 示例 7: 共享 lucide 图标库</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fb;
+            min-height: 100vh;
+            padding: 24px;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 880px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+            padding: 32px;
+        }
+
+        h1 {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        section {
+            margin-bottom: 32px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        h2 {
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h2 .badge {
+            font-size: 11px;
+            font-weight: 500;
+            background: #eef2ff;
+            color: #4338ca;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        p.hint {
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        code {
+            background: #f3f4f6;
+            color: #111827;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        pre {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 12px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.55;
+            overflow-x: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            margin-bottom: 12px;
+        }
+
+        .icon-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .icon-tile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 64px;
+            padding: 10px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #4b5563;
+        }
+
+        .icon-tile svg {
+            color: #4f46e5;
+        }
+
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        button:hover {
+            background: #4338ca;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .status {
+            font-size: 12px;
+            margin-top: 10px;
+            padding: 8px 10px;
+            border-radius: 4px;
+        }
+
+        .status.ok {
+            background: #ecfdf5;
+            color: #065f46;
+        }
+
+        .status.warn {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.err {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-tile {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #fef2f2;
+            color: #991b1b;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .alert-tile svg {
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>CDP-SDK 示例 7：共享 lucide 图标库</h1>
+        <p class="subtitle">演示纯 HTML/JS 个性化页面如何通过 <code>window.semApp.ui.lucide</code> 复用 CDP 宿主已加载的 lucide
+            图标库，避免在 iframe 内重复打包。</p>
+
+        <!-- ============== 状态检测 ============== -->
+        <section>
+            <h2>① 检测桥接状态 <span class="badge">必读</span></h2>
+            <p class="hint">
+                <code>window.semApp.ui.lucide</code> 由 CDP 宿主加载完 cdp-sdk 后由
+                <code>LucideBridge</code> 自动桥接而来。<strong>仅同源 iframe 生效</strong>；
+                跨域 iframe / 跨域中间层会断链，此时 <code>lucide</code> 为
+                <code>undefined</code>，需要业务自行降级。
+            </p>
+            <pre>const lucide = window.semApp?.ui?.lucide;
+if (!lucide) {
+    // 降级：用占位文字 / 内置 SVG / 不显示图标
+}</pre>
+            <div id="bridge-status" class="status warn">检测中…</div>
+        </section>
+
+        <!-- ============== 用法 1：DOM 自动扫描 ============== -->
+        <section>
+            <h2>② 用法 A：<code>createIcons()</code> 自动扫描 DOM</h2>
+            <p class="hint">
+                给元素加 <code>data-lucide="图标名"</code>（kebab-case），调用 <code>createIcons()</code>
+                即可一次性渲染所有图标。最适合静态布局。
+            </p>
+            <pre>&lt;i data-lucide="search"&gt;&lt;/i&gt;
+&lt;i data-lucide="settings"&gt;&lt;/i&gt;
+
+window.semApp.ui.lucide.createIcons();</pre>
+            <div class="icon-row">
+                <div class="icon-tile">
+                    <i data-lucide="search"></i>
+                    <span>search</span>
+                </div>
+                <div class="icon-tile">
+                    <i data-lucide="settings"></i>
+                    <span>settings</span>
+                </div>
+                <div class="icon-tile">
+                    <i data-lucide="user"></i>
+                    <span>user</span>
+                </div>
+                <div class="icon-tile">
+                    <i data-lucide="bell"></i>
+                    <span>bell</span>
+                </div>
+                <div class="icon-tile">
+                    <i data-lucide="heart"></i>
+                    <span>heart</span>
+                </div>
+                <div class="icon-tile">
+                    <i data-lucide="star"></i>
+                    <span>star</span>
+                </div>
+                <div class="icon-tile">
+                    <i data-lucide="check-circle"></i>
+                    <span>check-circle</span>
+                </div>
+                <div class="icon-tile">
+                    <i data-lucide="trash-2"></i>
+                    <span>trash-2</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============== 用法 2：编程式 createElement ============== -->
+        <section>
+            <h2>③ 用法 B：编程式 <code>createElement(icons[Name])</code></h2>
+            <p class="hint">
+                拿单个图标节点生成 SVG DOM 元素，插到任意位置。注意键名是
+                <strong>PascalCase</strong>（<code>icons.AlertTriangle</code>），与 DOM 扫描的
+                kebab-case 不同。
+            </p>
+            <pre>const { createElement, icons } = window.semApp.ui.lucide;
+const el = createElement(icons.AlertTriangle);
+el.setAttribute('width', 18);
+el.setAttribute('height', 18);
+container.appendChild(el);</pre>
+            <div id="programmatic-output" class="alert-tile"></div>
+        </section>
+
+        <!-- ============== 用法 3：动态切换 ============== -->
+        <section>
+            <h2>④ 用法 C：按事件动态替换图标</h2>
+            <p class="hint">
+                收藏 / 点赞这种切换状态的场景，调用 <code>createIcons</code> 重新扫描即可。
+            </p>
+            <button id="toggle-fav">
+                <i id="fav-icon" data-lucide="heart"></i>
+                <span id="fav-label">收藏</span>
+            </button>
+            <p class="hint" style="margin-top:10px;margin-bottom:0;">
+                点击按钮：图标在 <code>heart</code> ↔ <code>heart-off</code> 之间切换。
+            </p>
+        </section>
+
+        <!-- ============== 调试输出 ============== -->
+        <section>
+            <h2>⑤ 调试信息</h2>
+            <pre id="debug-output">等待执行…</pre>
+        </section>
+    </div>
+
+    <script>
+        (function () {
+            const statusEl = document.getElementById('bridge-status');
+            const debugEl = document.getElementById('debug-output');
+
+            function log(line) {
+                debugEl.textContent += '\n' + line;
+            }
+
+            // ========== ① 检测桥接 ==========
+            const lucide = window.semApp && window.semApp.ui && window.semApp.ui.lucide;
+
+            if (!lucide) {
+                statusEl.className = 'status err';
+                statusEl.textContent =
+                    '✗ 未检测到 window.semApp.ui.lucide。可能原因：当前页面与 CDP 宿主跨域、'
+                    + '中间层 iframe 跨域、或宿主主应用未注入 __LUCIDE__。请打开控制台查看 LucideBridge 的 warning。';
+                debugEl.textContent = 'lucide 不可用，后续示例已跳过。';
+                return;
+            }
+
+            statusEl.className = 'status ok';
+            statusEl.textContent = '✓ 已通过 window.semApp.ui.lucide 拿到 lucide 实例。';
+            debugEl.textContent = '[init] lucide bridged via window.semApp.ui.lucide';
+            log('[init] typeof createIcons = ' + typeof lucide.createIcons);
+            log('[init] icons keys sample = ' + Object.keys(lucide.icons || {}).slice(0, 5).join(', ') + ' …');
+
+            // ========== ② createIcons 自动扫描 ==========
+            try {
+                lucide.createIcons();
+                log('[A] createIcons() 完成，DOM 中所有 [data-lucide] 已替换为 SVG');
+            } catch (e) {
+                log('[A] createIcons 失败：' + e.message);
+            }
+
+            // ========== ③ 编程式 createElement ==========
+            try {
+                const node = lucide.icons.AlertTriangle || lucide.icons.AlertCircle;
+                const el = lucide.createElement(node);
+                el.setAttribute('width', '18');
+                el.setAttribute('height', '18');
+                el.setAttribute('stroke-width', '2');
+                const out = document.getElementById('programmatic-output');
+                out.innerHTML = '';
+                out.appendChild(el);
+                const span = document.createElement('span');
+                span.textContent = '表单校验失败：请检查必填项';
+                out.appendChild(span);
+                log('[B] createElement(icons.AlertTriangle) OK');
+            } catch (e) {
+                log('[B] createElement 失败：' + e.message);
+            }
+
+            // ========== ④ 动态切换 ==========
+            const btn = document.getElementById('toggle-fav');
+            const iconEl = document.getElementById('fav-icon');
+            const labelEl = document.getElementById('fav-label');
+            let favored = false;
+
+            btn.addEventListener('click', function () {
+                favored = !favored;
+                // 重新插入一个新的占位 <i>，因为上一次 createIcons 已经把它替换成 <svg>
+                const placeholder = document.createElement('i');
+                placeholder.id = 'fav-icon';
+                placeholder.setAttribute('data-lucide', favored ? 'heart-off' : 'heart');
+                const oldIcon = document.getElementById('fav-icon');
+                oldIcon.parentNode.replaceChild(placeholder, oldIcon);
+
+                labelEl.textContent = favored ? '已收藏' : '收藏';
+                lucide.createIcons();
+                log('[C] 切换为 ' + (favored ? 'heart-off' : 'heart'));
+            });
+        })();
+    </script>
+</body>
+
+</html>
