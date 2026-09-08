@@ -1,4 +1,4 @@
-# Tier 1: deterministic skill validation (no agent needed). Run from anywhere.
+﻿# Tier 1: deterministic skill validation (no agent needed). Run from anywhere.
 #   powershell -ExecutionPolicy Bypass -File tests\run-validation.ps1
 # Gates: structure, deliverable cleanliness, frontmatter, relative links, no leaked platform paths.
 # Exit code 0 = PASS, 1 = FAIL.
@@ -73,11 +73,128 @@ foreach ($p in $bad) {
 }
 Ok 'no leaked platform absolute paths'
 
-# 6. sanity: fixed Lucide CDN present, no unconditional head script in templates/examples
+# 6. sanity: Lucide 禁止 @latest / unpkg（不得直引或动态加载任何 Lucide CDN）
 $exampleDir = Join-Path $SkillDir 'references\examples'
 $badCdn = Get-ChildItem -Recurse $exampleDir -File -ErrorAction SilentlyContinue |
   Select-String -SimpleMatch '"@latest"', 'unpkg.com', 'lucide@latest'
 if ($badCdn) { Warn "examples reference @latest/unpkg: $($badCdn.Line -join ' | ')" }
+
+# 7. local-resource declaration protocol gate
+$deliveryFiles = Get-ChildItem -Recurse $SkillDir -File -Include *.md
+$deliveryText = ($deliveryFiles | ForEach-Object { Get-Content -Raw -Encoding UTF8 $_.FullName }) -join "`n"
+# SDK/preload/Lucide 门禁扫描 markdown 与 html 合并文本；历史 HTML 资源示例不纳入固定 CDN 声明协议
+$deliveryAllFiles = Get-ChildItem -Recurse $SkillDir -File -Include *.md, *.html
+$deliveryAllText = ($deliveryAllFiles | ForEach-Object { Get-Content -Raw -Encoding UTF8 $_.FullName }) -join "`n"
+
+# 固定 CDN URL -> 本地资源名/版本的精确映射，逐个校验而非只检查两个属性存在
+$fixedCdnMap = @{
+  'https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js'        = @{ name = 'tailwindcss';  version = '3.4.17' }
+  'https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js' = @{ name = 'wave-loading'; version = '1.0.0' }
+  'https://kwaidoo.com/cdn_general/libs/echarts/5.6.0/dist/echarts.min.js'            = @{ name = 'echarts';      version = '5.6.0' }
+}
+$fixedCdnScriptRe = '(?s)<script(?=[^>]*src="https://kwaidoo\.com/cdn_general/libs/[^"]+")[^>]*>'
+$fixedCdnScripts = [regex]::Matches($deliveryText, $fixedCdnScriptRe)
+if ($fixedCdnScripts.Count -eq 0) {
+  Fail '未发现任何固定 CDN script 标签，至少应存在 tailwindcss/wave-loading 声明'
+} else {
+  $mismatches = @()
+  foreach ($m in $fixedCdnScripts) {
+    $tag = $m.Value
+    $srcM = [regex]::Match($tag, 'src="([^"]+)"')
+    if (-not $srcM.Success) {
+      $mismatches += '缺少 src: ' + $tag.Substring(0, [Math]::Min($tag.Length, 60))
+      continue
+    }
+    $src = $srcM.Groups[1].Value
+    if (-not $fixedCdnMap.ContainsKey($src)) {
+      $mismatches += "未知固定 CDN: $src"
+      continue
+    }
+    $expected = $fixedCdnMap[$src]
+    $nameM = [regex]::Match($tag, 'data-cdp-resource="([^"]*)"')
+    $verM = [regex]::Match($tag, 'data-cdp-resource-version="([^"]*)"')
+    if (-not $nameM.Success -or $nameM.Groups[1].Value -ne $expected.name) {
+      $got = if ($nameM.Success) { $nameM.Groups[1].Value } else { '无' }
+      $mismatches += "$src 的 data-cdp-resource 应为 '$($expected.name)'，实际 '$got'"
+    }
+    if (-not $verM.Success -or $verM.Groups[1].Value -ne $expected.version) {
+      $got = if ($verM.Success) { $verM.Groups[1].Value } else { '无' }
+      $mismatches += "$src 的 data-cdp-resource-version 应为 '$($expected.version)'，实际 '$got'"
+    }
+  }
+  if ($mismatches.Count -gt 0) {
+    Fail "固定 CDN script 资源映射不匹配: $($mismatches -join ' | ')"
+  } else {
+    Ok "每个固定 CDN script 均与资源名/版本精确匹配 ($($fixedCdnScripts.Count) found)"
+  }
+}
+
+# 通用资源至少各出现一个已声明标签，避免整块示例被删后漏检
+foreach ($requiredName in @('tailwindcss', 'wave-loading')) {
+  $needle = 'data-cdp-resource="' + $requiredName + '"'
+  if ($deliveryText -notmatch [regex]::Escape($needle)) {
+    Fail "缺少已声明的本地资源标签: $requiredName"
+  }
+}
+if ($deliveryText -match 'cdn_general/libs/lucide|loadLucideFallback|动态加载 Lucide CDN') {
+  Fail 'Lucide must use window.semApp.ui.lucide without CDN fallback'
+}
+Ok "local-resource declaration protocol ok"
+
+# ---- 8. SDK 注入协议门禁：交付 markdown 不得加载 CDP-SDK / PanelX ----
+# 任何 script src 标签加载 cdp-sdk/cdp_sdk / panelx-sdk/panelx_sdk / PanelXSdkProxy/PanelXSdk（含本地相对地址）
+$sdkScriptRe = '(?is)<script[^>]*\bsrc\s*=\s*["'']?[^>]*?(?:cdp[-_]?sdk|panelx[-_]?sdk)[^>]*>'
+$sdkScriptMatches = [regex]::Matches($deliveryAllText, $sdkScriptRe)
+if ($sdkScriptMatches.Count -gt 0) {
+  Fail "交付文档不得通过 script src 加载 CDP-SDK/PanelX SDK: $($sdkScriptMatches[0].Value)"
+} else {
+  Ok 'no script src loading cdp/panelx sdk'
+}
+
+# preload.js 脚本标签或 devSdkUrl（用于下载 PanelX SDK）
+$preloadScriptRe = '(?s)<script[^>]*\bsrc\s*=\s*["'']?[^>]*?preload\.js[^>]*>'
+if ([regex]::IsMatch($deliveryAllText, $preloadScriptRe)) {
+  Fail '交付文档不得通过 preload.js 脚本标签加载 SDK'
+} elseif ($deliveryAllText -match '(?i)devSdkUrl') {
+  Fail '交付文档不得使用 devSdkUrl 下载 PanelX SDK'
+} else {
+  Ok 'no preload.js / devSdkUrl'
+}
+
+# Lucide 禁令：任何含 lucide 的 http/https URL、window.lucide、loadLucideFallback
+$lucideUrlRe = '(?i)https?://[^\s"'']*lucide'
+$lucideUrlMatch = [regex]::Match($deliveryAllText, $lucideUrlRe)
+if ($lucideUrlMatch.Success) {
+  Fail "交付文档不得包含含 lucide 的 http/https URL: $($lucideUrlMatch.Value)"
+} elseif ($deliveryAllText -match '(?i)\bwindow\.lucide\b') {
+  Fail '交付文档不得使用 window.lucide 全局'
+} elseif ($deliveryAllText -match '(?i)loadLucideFallback') {
+  Fail '交付文档不得包含 loadLucideFallback'
+} else {
+  Ok 'no lucide CDN URL / window.lucide / loadLucideFallback'
+}
+
+# 与 Lucide 同一代码块中的动态 script 创建/赋 src（简单正则，不构建解析器）：
+# createElement('script')、脚本变量的 .src 赋值、setAttribute('src', ...) 任一形式均判失败；
+# 不误伤 lucide.createElement 图标 API
+$codeBlockRe = '(?s)```.*?```'
+$dynScriptLucide = $false
+foreach ($m in [regex]::Matches($deliveryAllText, $codeBlockRe)) {
+  $block = $m.Value
+  if ($block -notmatch 'lucide') { continue }
+  $hasCreateScript = $block -match 'createElement\(\s*["'']script["'']'
+  $hasSrcAssign = $block -match '\.src\s*=\s*'
+  $hasSetAttrSrc = $block -match 'setAttribute\(\s*["'']src["'']'
+  if ($hasCreateScript -or $hasSrcAssign -or $hasSetAttrSrc) {
+    $dynScriptLucide = $true
+    break
+  }
+}
+if ($dynScriptLucide) {
+  Fail '交付文档不得在与 Lucide 同一代码块中动态创建 script 并赋 src'
+} else {
+  Ok 'no dynamic script creation with lucide'
+}
 
 # ---- summary ----
 Write-Host ''

@@ -17,7 +17,7 @@
 
 ```html
 <!-- 在 HTML 中引入 -->
-<script src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
+<script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
 ```
 
 ### 2. 使用组件

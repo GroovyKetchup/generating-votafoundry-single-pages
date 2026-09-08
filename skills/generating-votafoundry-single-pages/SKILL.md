@@ -42,7 +42,7 @@ description: Use when generating a single HTML page for VotaFoundry / SemFoundry
    - 用户未指定 UI 规范时遵循 `default-ui-design.md`；加载态参考 `wave-loading.md`。
    - 默认 `Tailwind CDN + Lucide + (看板场景加 ECharts)`；配色跟随 CDP 主题。
 5. **分支执行要点**：
-   - **数据页面**：熟读 `panelx-sdk.md`；CDP 主题同步 + 动作注册为必选；SDK 经由 `https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/panelx-sdk-proxy.js` 引入并正确初始化（`busDomainCode` 必填）。
+   - **数据页面**：熟读 `panelx-sdk.md`；CDP 主题同步 + 动作注册为必选；PanelXSdkProxy 由 CDP 宿主注入，页面直接用全局 `PanelXSdkProxy` 构造函数初始化（`busDomainCode` 必填），禁止 script src/本地脚本/preload 加载。
    - **页面入口**：熟读 `cdp-sdk-guide.md`「自定义 Shell 开发指南」；仅用 CDP-SDK，默认不加载 PanelX、不做动作注册（除非明确要求）。
 6. **交付前自检**（见下）。
 
@@ -50,13 +50,14 @@ description: Use when generating a single HTML page for VotaFoundry / SemFoundry
 
 ### 通用
 - 单文件 HTML；但"单文件"≠忽略宿主共享资源，资源策略优先复用宿主能力。
+- 资源声明：Tailwind CSS、wave-loading 必须使用 `data-cdp-resource` + `data-cdp-resource-version` 固定版本声明；ECharts 出现时同样要求；资源标签必须早于依赖脚本。
 - 界面文字简体中文；不暴露业务域/面板编号等技术信息。
 - Loading/错误/刷新反馈完整；局部失败不影响整体（错误边界 + toast 可降级）。
 - 已完成 CDP 主题适配。
 
 ### 数据页面
 - 使用真实接口，**禁止 mock 常量**。
-- 统一经 `panelx-sdk-proxy.js` 引入并正确初始化 SDK。
+- 使用由 CDP 宿主注入的 `PanelXSdkProxy` 全局构造器初始化并调用真实接口，交付 HTML 不得声明、外链、本地脚本引入或通过 preload 动态加载任何 SDK。
 - 关联字段通过硬编码配置映射。
 - **CDP 动作注册（含数据获取动作）是本次交付物的一部分，不是可后补的增强。** 为所有数据相关操作注册 CDP 动作，提供操作指南，参数校验与错误抛出完整。
 
@@ -78,10 +79,8 @@ description: Use when generating a single HTML page for VotaFoundry / SemFoundry
 - 默认无需 PanelX SDK 与动作注册（除非用户明确要求）。
 
 ### Lucide 图标（如用图标则必查）
-- 必须先判断并优先复用 `window.semApp?.ui?.lucide`。
-- 仅当 `window.semApp?.ui?.lucide` 不存在时，才允许动态创建 `<script>` 加载指定 CDN：
-  `https://kwaidoo.com/cdn_general/libs/lucide/0.562.0/umd/lucide.min.js`
-- 禁止在 `<head>` 或顶层无条件直引 `lucide.min.js`；禁止 `@latest`、`unpkg.com` 或非指定地址。
+- 只复用宿主共享实例：`const lucide = window.semApp?.ui?.lucide; lucide?.createIcons?.();`。
+- 禁止动态创建 `<script>` 加载 Lucide CDN；禁止在 `<head>` 或顶层直引 `lucide.min.js`；禁止 `@latest`、`unpkg.com` 或任何 CDN 地址。
 - 禁止以"自包含/快速交付/减少代码"为由跳过宿主资源判断。
 - 静态 `data-lucide` 渲染后必须调用 `createIcons()`；动态插入/替换/切换图标后必须再次渲染。
 - 禁止原生 `<select>` / `alert`；需自定义下拉组件与样式。

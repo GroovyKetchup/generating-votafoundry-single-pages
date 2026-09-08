@@ -11,7 +11,7 @@
 ## 🔴 三条红线（违反即失败）
 
 1. **✅ 必须使用 PanelXSdkProxy 获取真实数据**：`sdk.api.queryFormDataList({ panelCode: 'IML_XXXXX' })`
-2. **✅ 必须正确初始化 PanelXSdkProxy**：统一通过 `https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/panelx-sdk-proxy.js` 引入
+2. **✅ 必须正确初始化 PanelXSdkProxy**：PanelXSdkProxy 由 CDP 宿主注入，页面直接用全局 `PanelXSdkProxy` 构造函数初始化，**禁止**通过 script src、本地脚本或 preload 动态加载
 3. **🚫 严禁 Mock 数据**：不允许任何 `const data = [...]` 硬编码数据；若用户明确要求使用 Mock 数据，则按用户要求执行（优先级最高）。
 
 ## 📋 配置 JSON 的作用
@@ -63,10 +63,9 @@ const combined = listA.map(a => ({
 ## ✅ 输出规范
 
 - **格式**：单个 HTML 文件，直接输出代码，**不要任何解释、说明或markdown标记**
-- **CDN**：Tailwind CSS、Loading 使用以下可靠 CDN；Lucide Icons 优先使用宿主共享实例，降级时再使用 CDN
-  - Tailwind: `https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js`
-  - Lucide 降级 CDN: `https://kwaidoo.com/cdn_general/libs/lucide/0.562.0/umd/lucide.min.js`
-  - Loading: `https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js`
+- **CDN 资源声明**：Tailwind CSS、wave-loading 必须使用固定版本声明标签；Lucide 只复用宿主共享实例 `window.semApp?.ui?.lucide`，禁止任何 CDN fallback。
+  - Tailwind: `<script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>`
+  - Loading: `<script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>`
 - **语言**：所有界面文字使用简体中文
 - **重要**：只返回纯 HTML 代码，从 `<!DOCTYPE html>` 开始到 `</html>` 结束，不要包含任何其他内容
 
@@ -90,11 +89,8 @@ const combined = listA.map(a => ({
 #### 方式 A：自动注入（推荐）
 如果页面通过 **ExternalPage 组件（面板网页）** 加载，CDP 会自动注入 SDK，无需任何操作。
 
-#### 方式 B：手动引入（不需要，除非用户明确指定）
-仅当用户明确说明页面通过 URL 对外提供使用时才需要手动引入：
-```html
-<script src="https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/cdp-sdk-1.4.1.min.js"></script>
-```
+#### 方式 B：禁止手动引入
+CDP-SDK 统一由宿主注入。交付 HTML **禁止**用 script 标签的 `src` 属性外链或本地引入，也禁止 preload 动态加载；宿主注入后直接从 `window.semApp.cdpSdk` 使用。
 
 ### 2. SDK 可用性检查
 
@@ -395,13 +391,9 @@ const rowOperationBar = [
 
 ### 表单组件示例
 
-```
-
 ### 1. 引入 SDK
 
-```html
-<script src="https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/panelx-sdk-proxy.js"></script>
-```
+PanelXSdkProxy 由 CDP 宿主注入，页面**禁止**用 script 标签的 `src` 属性外链或本地引入，也禁止 preload 动态加载；直接用全局 `PanelXSdkProxy` 构造函数初始化。
 
 
 ### 2. 初始化 SDK
@@ -652,55 +644,32 @@ function renderField(field) {
 
 ### 图标资源加载规则（强制）
 
-1. **必须优先复用** `window.semApp?.ui?.lucide`。
-2. **仅当该实例不存在时**，才允许动态加载 Lucide CDN。
-3. **禁止将 CDN 作为默认直引方案**，禁止在 `<head>` 中无条件直接引入 `lucide.min.js`。
-4. **禁止为了“自包含页面”或“快速交付”跳过宿主资源判断**。
-5. “自包含页面”不等于“忽略宿主共享资源”；单页交付只表示最终产物是一个 HTML，资源策略必须遵循“共享资源优先，CDN 兜底”。
-6. DOM 中使用 `data-lucide` 后，必须调用 `createIcons()`；动态插入或切换图标后，必须再次执行渲染。
+1. **只复用宿主共享实例**：`const lucide = window.semApp?.ui?.lucide; lucide?.createIcons?.();`。
+2. 禁止动态创建 `<script>` 加载 Lucide CDN；禁止 `@latest`、`unpkg.com` 或任何 CDN 地址。
+3. **禁止为了“自包含页面”或“快速交付”跳过宿主资源判断**；“自包含页面”不等于“忽略宿主共享资源”。
+4. DOM 中静态 `data-lucide` 渲染后必须调用 `createIcons()`；动态插入、替换或切换图标后，必须再次执行渲染。
 
 
 ```html
-<!-- ✅ Tailwind CSS - 必须使用可靠 CDN -->
-<script src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>
+<!-- ✅ Tailwind CSS - 必须使用本地资源协议声明 -->
+<script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>
 
-<!-- ✅ Lucide Icons - 必须先判断宿主实例，只有缺失时才动态加载降级 CDN -->
+<!-- ✅ Lucide Icons - 复用宿主共享实例，禁止 CDN fallback -->
 <script>
-  function loadLucideFallback() {
-    return new Promise((resolve, reject) => {
-      if (window.semApp?.ui?.lucide || window.lucide) return resolve();
-      const script = document.createElement('script');
-      script.src = 'https://kwaidoo.com/cdn_general/libs/lucide/0.562.0/umd/lucide.min.js';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-
-  async function renderLucideIcons() {
+  function renderLucideIcons() {
     const lucide = window.semApp?.ui?.lucide;
-    if (lucide) {
-      lucide.createIcons();
-    } else {
-      await loadLucideFallback();
-      (window.semApp?.ui?.lucide || window.lucide)?.createIcons?.();
-    }
+    lucide?.createIcons?.();
   }
 </script>
 ```
 
 ### 禁止写法
 
-```html
-<!-- ❌ 错误：跳过宿主判断，直接把 CDN 作为默认方案 -->
-<script src="https://kwaidoo.com/cdn_general/libs/lucide/0.562.0/umd/lucide.min.js"></script>
-```
-
 ### 生成前验收项（不得省略）
 
 - 是否先判断 `window.semApp?.ui?.lucide`。
-- 是否只在宿主实例缺失时才动态加载 Lucide CDN。
-- 是否没有把 Lucide CDN 写成默认直引 `<script src="...lucide.min.js"></script>`。
+- 是否只复用 `window.semApp?.ui?.lucide`，没有动态加载任何 Lucide CDN。
+- 是否没有把 Lucide CDN 写成直引 `<script src="...lucide.min.js"></script>`。
 - 是否在静态 `data-lucide` 渲染后调用 `createIcons()`。
 - 是否在动态插入、替换或切换图标后再次调用 `createIcons()`。
 ```
@@ -804,10 +773,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>页面标题</title>
-  <!-- ✅ 可靠 CDN 地址 -->
-  <script src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>
-  <!-- Lucide Icons 优先使用 window.semApp?.ui?.lucide，不可用时再动态加载降级 CDN -->
-  <script src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
+  <!-- ✅ 本地资源协议声明 -->
+  <script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>
+  <!-- Lucide Icons 复用 window.semApp?.ui?.lucide，禁止 CDN fallback -->
+  <script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen">
   <!-- 加载状态 -->
@@ -877,7 +846,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 引入：
 ```html
-<script src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
+<script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
 ```
 
 使用（建议配合 Tailwind CSS 容器）：
@@ -968,7 +937,7 @@ async function handleSave() {
 ### 必须项
 - [ ] 理解了用户需求（如果有）
 - [ ] 理解了 `current_panel_config` 的业务意图
-- [ ] 使用 `https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/panelx-sdk-proxy.js` 引入 SDK
+- [ ] 确认 PanelXSdkProxy 由宿主注入，交付 HTML 未通过 script src/本地脚本/preload 加载任何 SDK
 - [ ] 没有任何硬编码的 mock 数据
 - [ ] 所有界面文字使用简体中文
 - [ ] 直接输出 HTML 代码，不包含 markdown 代码块
@@ -978,7 +947,7 @@ async function handleSave() {
 - [ ] **使用默认主题**
 - [ ] **错误边界处理（局部失败不影响整体，提供降级与提示）**
 - [ ] 若使用 Lucide 图标，已优先判断并复用 `window.semApp?.ui?.lucide`
-- [ ] 若使用 Lucide 图标，仅在 `window.semApp?.ui?.lucide` 不存在时才动态加载 Lucide CDN
+- [ ] 若使用 Lucide 图标，没有动态加载任何 Lucide CDN
 - [ ] 若使用 Lucide 图标，没有在 `<head>` 或 HTML 顶层无条件直引 `lucide.min.js`
 - [ ] 若使用 Lucide 图标，没有为了“单页自包含”“快速交付”“减少代码”而跳过宿主资源判断
 - [ ] 若使用 Lucide 图标，静态 `data-lucide` 渲染后已调用 `createIcons()`，动态插入、替换或切换图标后已再次渲染

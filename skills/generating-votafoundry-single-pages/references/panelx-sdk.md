@@ -3,60 +3,32 @@
 ## 简介
 
 PanelX SDK
-        是一个功能强大的网页交互开发工具包，提供了完整的API接口封装和用户认证管理功能。支持UMD模块格式，可通过CDN引入或本地部署使用。
+        是一个功能强大的网页交互开发工具包，提供了完整的API接口封装和用户认证管理功能。由 CDP 宿主注入，通过全局构造器 `PanelXSdk` / `PanelXSdkProxy` 访问。
 
 ## 快速开始
 
 ### 1. 引入SDK
 
-PanelX SDK 使用 preload.js 作为加载器，自动处理开发和生产环境的 SDK 加载：
+PanelX SDK（`PanelXSdk` / `PanelXSdkProxy`）统一由 CDP 宿主注入，通过 `window.semApp.panelXSdk` 或全局构造器 `PanelXSdk` / `PanelXSdkProxy` 访问。交付 HTML **禁止**通过 script src、本地脚本或 preload 动态加载。
 
-#### 下载 preload.js
-
-📥 下载 preload.js
-
-#### 在 HTML 中引入
-
-将 preload.js 放到项目中，然后在 HTML 的 `<head>` 标签中引入：
-
-```javascript
-<script src="./preload.js" devSdkUrl="http://your-api-domain.com/wp-core/api/getPanelXSdk"></script>
-```
-
-> **注意：**
-> **参数说明：**
-
-> - `devSdkUrl` (可选) - 开发环境下载 panelx-sdk.js 的 URL
->   - 仅在开发环境（localhost、127.0.0.1、file://）时使用
->   - 生产环境会自动忽略此参数，使用生产环境的 panelx-sdk.js
->   - 格式：`baseUrl + /wp-core/api/getPanelXSdk`
-
-
-> **警告：**
-> **为什么使用 preload.js？**
-
-> - ✅ **避免硬编码**：不需要在代码中写死 SDK 的 URL
-> - ✅ **环境自适应**：自动识别开发和生产环境，加载对应的 SDK
-> - ✅ **统一管理**：所有页面只需引入 preload.js，无需关心 SDK 的具体位置
-> - ✅ **版本控制**：开发环境可以使用最新的 SDK，生产环境使用稳定版本
-
+- ❌ 禁止用 preload 加载器或开发环境下载参数加载 PanelX SDK。
+- ❌ 禁止用 script 标签的 `src` 属性外链或本地引入 PanelX SDK。
+- ✅ 宿主注入后直接从既有全局构造器初始化。
 
 #### 示例：完整的 HTML 页面
 
-```javascript
+```html
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <title>PanelX SDK 示例</title>
-    <!-- 引入 preload.js -->
-    <script src="./preload.js" devSdkUrl="http://dev.xxx.com/wp-core/api/getPanelXSdk"></script>
 </head>
 <body>
     <h1>PanelX SDK 示例</h1>
     
     <script>
-        // SDK 会自动加载，可以直接使用
+        // SDK 由 CDP 宿主注入，直接从既有全局构造器初始化
         const sdk = new PanelXSdk({
             busDomainCode: 'TODO',
             appCode: 'TODO',
@@ -2458,4 +2430,3 @@ console.log(PanelXSdk.version); // "1.4.0"
 > **警告：**
 > **重要提醒：**
 >      在生产环境中使用时，请确保API接口的安全性，避免在客户端暴露敏感信息。
-
