@@ -2902,7 +2902,7 @@ function toggleFavorite(favored) {
 1. **图标名大小写**：DOM 扫描用 `data-lucide="check-circle"`（kebab-case），
    编程式用 `icons.CheckCircle`（PascalCase）
 2. **图标可用性**：`Object.keys(lucide.icons)` 可枚举所有可用图标名；完整图标列表见
-   [lucide.dev/icons](https://lucide.dev/icons/)
+   `lucide.dev/icons`
 3. **跨域降级**：必须在调用前判断 `window.semApp?.ui?.lucide` 是否存在，否则跨域
    场景会抛 `Cannot read properties of undefined`
 4. **不要自己 `import 'lucide'`**：在 iframe 内重新引入会破坏"与宿主共享一份"的

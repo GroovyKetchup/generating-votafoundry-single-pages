@@ -376,6 +376,7 @@ async function registerActions() {
 </script>
 ```
 
+### 禁止写法
 ### 使用方法
 ```html
 <i data-lucide="users" class="w-6 h-6"></i>
