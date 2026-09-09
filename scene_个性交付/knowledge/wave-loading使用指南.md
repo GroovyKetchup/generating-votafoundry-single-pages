@@ -17,7 +17,7 @@
 
 ```html
 <!-- 在 HTML 中引入 -->
-<script src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
+<script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
 ```
 
 ### 2. 使用组件
@@ -132,7 +132,7 @@ async function saveData() {
 ### 示例 4: React 中使用
 
 ```tsx
-// 1. 在 index.html 中引入
+// 1. 在 html 中引入
 <script src="/wave-loading.js"></script>
 
 // 2. 添加类型声明（可选）

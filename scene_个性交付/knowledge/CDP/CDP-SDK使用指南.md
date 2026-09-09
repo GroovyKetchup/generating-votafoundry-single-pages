@@ -25,14 +25,9 @@ CDP-SDK 提供两种引入方式:
 
 如果你的页面通过 **ExternalPage 组件(面板网页)** 加载,CDP 会自动注入 SDK,无需任何操作。
 
-#### 方式 B: 手动引入
+#### 方式 B: 禁止手动引入
 
-如果是其他外部链接嵌入的页面,需要手动引入:
-
-```html
-<!-- x.x.x 为版本号，与本指南版本保持一致 -->
-<script src="https://kwaidoo.com/cdn_cdp/libs/cdp_sdk/x.x.x/cdp-sdk.min.js"></script>
-```
+CDP-SDK 统一由宿主注入。交付 HTML **禁止**用 script 标签的 `src` 属性外链或本地引入，也禁止 preload 动态加载；宿主注入后直接从 `window.semApp.cdpSdk` 使用。
 
 ### Step 2: 检查 SDK 是否可用
 
@@ -1168,8 +1163,6 @@ await unmountFn();
         </main>
     </div>
 
-    <!-- 引入 SDK -->
-    <script src="./cdp-sdk.min.js"></script>
     <script>
         // 初始化逻辑 - 不建议阻塞 load 事件，使用异步调用
         window.addEventListener('load', () => {
@@ -2829,7 +2822,7 @@ if (wxminiSdk) {
 
 > **版本要求**：CDP **1.11.4 及以上**。低于该版本 `window.semApp.ui` 不存在。
 
-CDP 宿主环境会把已加载的 [lucide](https://lucide.dev/) 图标库引用挂载到
+CDP 宿主环境会把已加载的 `lucide.dev` 图标库引用挂载到
 `window.semApp.ui.lucide`，iframe 业务代码可直接复用，无需在自己的页面里再引入一份
 lucide，**节省体积、保证图标视觉与宿主一致**。
 

@@ -22,11 +22,8 @@
 #### 方式 A：自动注入（推荐）
 如果页面通过 **ExternalPage 组件（面板网页）** 加载，CDP 会自动注入 SDK。
 
-#### 方式 B：手动引入（不需要，除非用户明确指定）
-仅当用户明确说明页面通过 URL 对外提供使用时才需要手动引入：
-```html
-<script src="https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/cdp-sdk-1.6.0.min.js"></script>
-```
+#### 方式 B：禁止手动引入
+CDP-SDK 统一由宿主注入。交付 HTML **禁止**用 script 标签的 `src` 属性外链或本地引入，也禁止 preload 动态加载；宿主注入后直接从 `window.semApp.cdpSdk` 使用。
 
 ### 步骤 2：SDK 可用性与版本检查
 
@@ -507,7 +504,7 @@ interface ThemePreset {
 }
 ```
 
-> 主题订阅部分的 `themeState` 使用 `ThemeStateWithEffective`。  
+> 主题订阅部分的 `themeState` 使用 `ThemeStateWithEffective`。
 > 主题面板部分的 `modes` 使用 `ThemeMode`，`presets` 使用 `ThemePreset`。
 
 #### `IMenuItem`
@@ -688,16 +685,14 @@ console.log('已展开:', Array.from(state.expandedIds));
 
 ## 🎨 UI 实现（样式与图标）
 
-- **样式建议**：使用 Tailwind CSS CDN  
-  `https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js`
-- **图标资源加载规则（强制）**：必须优先复用 `window.semApp?.ui?.lucide`；仅当该实例不存在时，才允许动态加载 Lucide CDN  
-  `https://kwaidoo.com/cdn_general/libs/lucide/0.562.0/umd/lucide.min.js`
-- **明确禁令**：禁止将 CDN 作为默认直引方案；禁止为了“自包含页面”或“快速交付”跳过宿主资源判断；“自包含页面”不等于“忽略宿主共享资源”
-- **图标渲染**：DOM 中使用 `data-lucide` 后，必须调用可用实例的 `createIcons()`；动态插入、替换或切换图标后，必须再次执行渲染
-- **验收项（不得省略）**：是否先判断 `window.semApp?.ui?.lucide`；是否只在缺失时动态加载 CDN；是否没有无条件直引 `lucide.min.js`; 是否在静态和动态图标渲染后调用 `createIcons()`
-- **执行伪代码**：`const lucide = window.semApp?.ui?.lucide; if (lucide) { lucide.createIcons(); } else { await loadLucideFallback(); (window.semApp?.ui?.lucide || window.lucide)?.createIcons?.(); }`
-- **Loading 组件**（默认使用）：  
-  `https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js`
+- **样式建议**：使用 Tailwind CSS 本地资源协议声明
+  `<script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>`
+- **图标资源加载规则（强制）**：只复用宿主共享实例 `window.semApp?.ui?.lucide`；禁止任何 CDN fallback
+- **明确禁令**：禁止动态创建 `<script>` 加载 Lucide CDN；禁止 `@latest`、`unpkg.com` 或任何 CDN 地址；禁止为了“自包含页面”或“快速交付”跳过宿主资源判断；“自包含页面”不等于“忽略宿主共享资源”
+- **图标渲染**：DOM 中静态 `data-lucide` 渲染后必须调用可用实例的 `createIcons()`；动态插入、替换或切换图标后，必须再次执行渲染
+- **执行伪代码**：`const lucide = window.semApp?.ui?.lucide; lucide?.createIcons?.();`
+- **Loading 组件**（默认使用）：
+  `<script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>`
 
 使用示例（建议配合 Tailwind CSS 容器）：
 ```html
@@ -751,8 +746,8 @@ console.log('已展开:', Array.from(state.expandedIds));
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>自定义外壳</title>
-  <script src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>
-  <script src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
+  <script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>
+  <script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>
 </head>
 <body>
   <div id="loading" class="h-full flex items-center justify-center">
@@ -1013,7 +1008,7 @@ function renderMenuSkeleton() {
 - [ ] 所有 SDK 调用都有 `showToast` 友好提示与错误兜底（主题订阅静默默认样式兜底）
 - [ ] 各模块功能正常，且模块级错误不影响整体渲染
 - [ ] 若使用 Lucide 图标，已优先判断并复用 `window.semApp?.ui?.lucide`
-- [ ] 若使用 Lucide 图标，仅在 `window.semApp?.ui?.lucide` 不存在时才动态加载 Lucide CDN
+- [ ] 若使用 Lucide 图标，没有动态加载任何 Lucide CDN
 - [ ] 若使用 Lucide 图标，没有在 `<head>` 或 HTML 顶层无条件直引 `lucide.min.js`
 - [ ] 若使用 Lucide 图标，没有为了“单页自包含”“快速交付”“减少代码”而跳过宿主资源判断
 - [ ] 若使用 Lucide 图标，静态 `data-lucide` 渲染后已调用 `createIcons()`，动态插入、替换或切换图标后已再次渲染
