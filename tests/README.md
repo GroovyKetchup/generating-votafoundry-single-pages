@@ -18,6 +18,7 @@ powershell -ExecutionPolicy Bypass -File tests\run-validation.ps1
 - `SKILL.md` 中所有相对链接可解析
 - 未泄漏平台绝对路径（`/data/scene/`、`/knowledge/`、`/compose`）
 - 示例里无 `@latest` / `unpkg.com` 直引
+- `scene_个性交付/knowledge` 与 `references/` 镜像一致（调用 `tools/sync-scene.ps1 -Check`；不一致即 FAIL）
 
 退出码：`0`=PASS，`1`=FAIL。
 

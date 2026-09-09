@@ -1,6 +1,6 @@
 ﻿# Tier 1: deterministic skill validation (no agent needed). Run from anywhere.
 #   powershell -ExecutionPolicy Bypass -File tests\run-validation.ps1
-# Gates: structure, deliverable cleanliness, frontmatter, relative links, no leaked platform paths.
+# Gates: structure, deliverable cleanliness, frontmatter, relative links, no leaked platform paths, scene mirror sync.
 # Exit code 0 = PASS, 1 = FAIL.
 
 $ErrorActionPreference = 'Stop'
@@ -194,6 +194,19 @@ if ($dynScriptLucide) {
   Fail '交付文档不得在与 Lucide 同一代码块中动态创建 script 并赋 src'
 } else {
   Ok 'no dynamic script creation with lucide'
+}
+
+# ---- 9. scene mirror drift gate: scene_个性交付/knowledge must mirror references/ ----
+$syncScript = Join-Path $RepoRoot 'tools\sync-scene.ps1'
+if (Test-Path $syncScript) {
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $syncScript -Check
+  if ($LASTEXITCODE -ne 0) {
+    Fail 'scene_个性交付/knowledge 与 references/ 不一致（运行 tools\sync-scene.ps1 同步）'
+  } else {
+    Ok 'scene_个性交付/knowledge 与 references/ 镜像一致'
+  }
+} else {
+  Warn 'tools\sync-scene.ps1 未找到，跳过 scene 镜像校验'
 }
 
 # ---- summary ----

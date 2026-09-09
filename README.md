@@ -17,8 +17,11 @@ skills/generating-votafoundry-single-pages/
 └── references/       # 参考素材：PanelX-SDK 手册、CDP-SDK 指南、生成模板、设计规范、示例
 
 tests/
-├── run-validation.ps1               # Tier 1 确定性校验（结构/链接/红线残留）
+├── run-validation.ps1               # Tier 1 确定性校验（结构/链接/红线残留 + scene 镜像一致）
 └── agent-run-pressure-tests.md      # Tier 2 子智能体压力测试编排（devin -p 使用）
+
+tools/
+└── sync-scene.ps1                   # 把 references/ 镜像到 scene_个性交付/knowledge/；-Check 为漂移门禁
 ```
 
 ## 安装到你的技能环境
