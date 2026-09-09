@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDP-SDK 示例 2: 数据展示与指令调用</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .data-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f5576c;
+        }
+
+        .data-item label {
+            display: block;
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .data-item .value {
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+
+        .log-entry.info {
+            border-left-color: #4fc3f7;
+        }
+
+        .log-entry.success {
+            border-left-color: #66bb6a;
+        }
+
+        .log-entry.error {
+            border-left-color: #ef5350;
+        }
+
+        .log-entry .timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 数据展示与指令调用示例</h1>
+            <p class="subtitle">演示如何使用 CDP-SDK 获取数据和调用各种指令</p>
+        </div>
+
+        <!-- 初始化数据展示 -->
+        <div class="card">
+            <h2>📦 初始化数据</h2>
+            <div id="initDataContainer">
+                <div class="empty-state">暂无数据</div>
+            </div>
+        </div>
+
+        <!-- 指令操作 -->
+        <div class="card">
+            <h2>🎯 指令操作示例</h2>
+            <div class="action-buttons">
+                <button class="btn-success" onclick="showSuccessToast()">
+                    ✓ 成功提示
+                </button>
+                <button class="btn-primary" onclick="showErrorToast()">
+                    ✕ 错误提示
+                </button>
+                <button class="btn-warning" onclick="showWarningToast()">
+                    ⚠ 警告提示
+                </button>
+                <button class="btn-info" onclick="showInfoToast()">
+                    ℹ 信息提示
+                </button>
+                <button class="btn-info" onclick="clearLogs()">
+                    🗑️ 清空日志
+                </button>
+            </div>
+        </div>
+
+        <!-- 操作日志 -->
+        <div class="card">
+            <h2>📝 操作日志</h2>
+            <div class="log-container" id="logContainer">
+                <div class="empty-state">暂无日志</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+        ==========================================
+        第一步: SDK 引入
+        ==========================================
+        注意: 如果此页面是通过 ExternalPage 组件(面板网页)嵌入的,
+        CDP 会自动注入 SDK,无需手动引入下面的 script 标签。
+        
+        如果是其他外部链接嵌入的页面,需要手动引入:
+    -->
+    <!-- <script src="https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/cdp-sdk-1.4.1.min.js"></script> -->
+
+    <script>
+        // ==========================================
+        // 第二步: 检查 SDK 是否可用
+        // ==========================================
+        function checkSDK() {
+            if (window.semApp && window.semApp.cdpSdk) {
+                addLog('CDP-SDK 已加载', 'success');
+                return true;
+            } else {
+                addLog('CDP-SDK 未加载,请检查环境', 'error');
+                return false;
+            }
+        }
+
+        // ==========================================
+        // 第三步: 获取并展示初始化数据
+        // ==========================================
+        // 注意:
+        // 1. 初始化数据仅在通过弹窗指令(ui.modal.open)打开当前页面时传入
+        // 2. 数据来源于打开弹窗时传递的 data 参数
+        // 3. 更多细节请查阅 CDP-SDK 使用指南
+        function loadInitData() {
+            if (!checkSDK()) return;
+
+            try {
+                const initData = window.semApp.cdpSdk.getInitData();
+                addLog('获取初始化数据成功', 'success');
+                console.log('📦 初始化数据:', initData);
+
+                const container = document.getElementById('initDataContainer');
+
+                if (initData && Object.keys(initData).length > 0) {
+                    // 创建数据网格
+                    const grid = document.createElement('div');
+                    grid.className = 'data-grid';
+
+                    Object.entries(initData).forEach(([key, value]) => {
+                        const item = document.createElement('div');
+                        item.className = 'data-item';
+                        item.innerHTML = `
+                            <label>${key}</label>
+                            <div class="value">${formatValue(value)}</div>
+                        `;
+                        grid.appendChild(item);
+                    });
+
+                    container.innerHTML = '';
+                    container.appendChild(grid);
+                } else {
+                    container.innerHTML = '<div class="empty-state">暂无初始化数据</div>';
+                }
+            } catch (error) {
+                addLog('获取初始化数据失败: ' + error.message, 'error');
+                console.error('获取初始化数据失败:', error);
+            }
+        }
+
+        // ==========================================
+        // 第四步: 调用各种 Toast 提示
+        // ==========================================
+
+        // 成功提示
+        async function showSuccessToast() {
+            if (!checkSDK()) return;
+
+            try {
+                await window.semApp.cdpSdk.toast('操作成功', {
+                    type: 'success',
+                    description: '数据已成功保存到系统'
+                });
+                addLog('显示成功提示', 'success');
+            } catch (error) {
+                addLog('显示提示失败: ' + error.message, 'error');
+            }
+        }
+
+        // 错误提示
+        async function showErrorToast() {
+            if (!checkSDK()) return;
+
+            try {
+                await window.semApp.cdpSdk.toast('操作失败', {
+                    type: 'error',
+                    description: '网络连接超时,请检查网络后重试'
+                });
+                addLog('显示错误提示', 'info');
+            } catch (error) {
+                addLog('显示提示失败: ' + error.message, 'error');
+            }
+        }
+
+        // 警告提示
+        async function showWarningToast() {
+            if (!checkSDK()) return;
+
+            try {
+                await window.semApp.cdpSdk.toast('请注意', {
+                    type: 'warning',
+                    description: '您有未保存的更改,请及时保存',
+                    duration: 5000
+                });
+                addLog('显示警告提示', 'info');
+            } catch (error) {
+                addLog('显示提示失败: ' + error.message, 'error');
+            }
+        }
+
+        // 信息提示
+        async function showInfoToast() {
+            if (!checkSDK()) return;
+
+            try {
+                await window.semApp.cdpSdk.toast('系统提示', {
+                    type: 'info',
+                    description: '系统将在 5 分钟后进行维护'
+                });
+                addLog('显示信息提示', 'info');
+            } catch (error) {
+                addLog('显示提示失败: ' + error.message, 'error');
+            }
+        }
+
+        // ==========================================
+        // 工具函数
+        // ==========================================
+
+        // 添加日志
+        function addLog(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+
+            // 如果是第一条日志,清空空状态
+            if (container.querySelector('.empty-state')) {
+                container.innerHTML = '';
+            }
+
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+
+            const timestamp = new Date().toLocaleTimeString('zh-CN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+
+            entry.innerHTML = `
+                <span class="timestamp">[${timestamp}]</span>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 清空日志
+        function clearLogs() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '<div class="empty-state">暂无日志</div>';
+            addLog('日志已清空', 'info');
+        }
+
+        // 格式化值
+        function formatValue(value) {
+            if (value === null || value === undefined) {
+                return '-';
+            }
+            if (typeof value === 'object') {
+                return JSON.stringify(value);
+            }
+            return String(value);
+        }
+
+        // ==========================================
+        // 页面加载时初始化
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            addLog('页面加载完成', 'info');
+            checkSDK();
+            loadInitData();
+        });
+    </script>
+</body>
+
+</html>

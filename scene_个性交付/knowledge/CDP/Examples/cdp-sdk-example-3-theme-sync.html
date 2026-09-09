@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDP-SDK 示例 3: 主题订阅与自动同步</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            /* 背景色将通过主题动态设置 */
+            background: var(--bg-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--card-bg, white);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            color: var(--text-primary, #333);
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary, #666);
+            font-size: 14px;
+        }
+
+        .card {
+            background: var(--card-bg, white);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card h2 {
+            color: var(--text-primary, #333);
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .info-item {
+            background: var(--info-bg, #f8f9fa);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color, #667eea);
+            transition: all 0.3s ease;
+        }
+
+        .info-item label {
+            display: block;
+            color: var(--text-secondary, #666);
+            font-size: 12px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .info-item .value {
+            color: var(--text-primary, #333);
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .color-item {
+            background: var(--info-bg, #f8f9fa);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .color-swatch {
+            width: 100%;
+            height: 60px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-label {
+            font-size: 12px;
+            color: var(--text-secondary, #666);
+            margin-bottom: 4px;
+        }
+
+        .color-value {
+            font-size: 11px;
+            color: var(--text-tertiary, #999);
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success-color, linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%));
+            color: white;
+        }
+
+        .btn-info {
+            background: var(--info-color, linear-gradient(135deg, #a8edea 0%, #fed6e3 100%));
+            color: #333;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .log-container {
+            background: var(--log-bg, #1e1e1e);
+            color: var(--log-text, #d4d4d4);
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+
+        .log-entry.info {
+            border-left-color: #4fc3f7;
+        }
+
+        .log-entry.success {
+            border-left-color: #66bb6a;
+        }
+
+        .log-entry.error {
+            border-left-color: #ef5350;
+        }
+
+        .log-entry .timestamp {
+            color: #888;
+            margin-right: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-tertiary, #999);
+            padding: 40px;
+            font-size: 14px;
+        }
+
+        .code-block {
+            background: var(--code-bg, #f5f5f5);
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 10px;
+            color: var(--code-text, #333);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge-light {
+            background: #ffeaa7;
+            color: #2d3436;
+        }
+
+        .badge-dark {
+            background: #2d3436;
+            color: #dfe6e9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 主题订阅与自动同步示例</h1>
+            <p class="subtitle">演示如何使用 CDP-SDK 订阅父窗口的主题变化,实现实时自动同步</p>
+        </div>
+
+        <!-- 主题信息展示 -->
+        <div class="card">
+            <h2>🌓 当前主题信息</h2>
+            <div id="themeInfoContainer">
+                <div class="empty-state">点击下方按钮获取主题配置</div>
+            </div>
+        </div>
+
+        <!-- 主题颜色展示 -->
+        <div class="card">
+            <h2>🎨 主题颜色</h2>
+            <div id="colorPaletteContainer">
+                <div class="empty-state">暂无颜色数据</div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="card">
+            <h2>🎯 操作</h2>
+            <div class="action-buttons">
+                <button class="btn-info" onclick="clearLogs()">
+                    �️ 清空日志
+                </button>
+            </div>
+            <p style="margin-top: 15px; color: var(--text-secondary, #666); font-size: 13px;">
+                � 提示: 主题会自动订阅并同步,无需手动操作。尝试在父窗口切换主题,观察自动同步效果!
+            </p>
+        </div>
+
+        <!-- 操作日志 -->
+        <div class="card">
+            <h2>📝 操作日志</h2>
+            <div class="log-container" id="logContainer">
+                <div class="empty-state">暂无日志</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 
+        ==========================================
+        第一步: SDK 引入
+        ==========================================
+        注意: 如果此页面是通过 ExternalPage 组件(面板网页)嵌入的,
+        CDP 会自动注入 SDK,无需手动引入下面的 script 标签。
+        
+        如果是其他外部链接嵌入的页面,需要手动引入:
+    -->
+    <!-- <script src="https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/cdp-sdk-1.4.1.min.js"></script> -->
+
+    <script>
+        // 全局变量存储主题配置
+        let currentThemeConfig = null;
+
+        // ==========================================
+        // 第二步: 检查 SDK 是否可用
+        // ==========================================
+        function checkSDK() {
+            if (window.semApp && window.semApp.cdpSdk) {
+                addLog('✅ CDP-SDK 已加载', 'success');
+                return true;
+            } else {
+                addLog('❌ CDP-SDK 未加载,请检查环境', 'error');
+                return false;
+            }
+        }
+
+        // ==========================================
+        // 第三步: 获取初始主题配置
+        // ==========================================
+        async function getInitialTheme() {
+            if (!checkSDK()) return null;
+
+            try {
+                addLog('🔄 正在获取初始主题配置...', 'info');
+
+                // 调用 SDK 的 getTheme 方法
+                const themeConfig = await window.semApp.cdpSdk.getTheme();
+                currentThemeConfig = themeConfig;
+
+                addLog('✅ 初始主题配置获取成功', 'success');
+                console.log('🎨 主题配置:', themeConfig);
+
+                // 显示主题信息
+                displayThemeInfo(themeConfig);
+
+                // 显示颜色面板
+                displayColorPalette(themeConfig);
+
+                // 应用主题
+                applyThemeToPage(themeConfig);
+
+                return themeConfig;
+
+            } catch (error) {
+                addLog('❌ 获取主题配置失败: ' + error.message, 'error');
+                console.error('获取主题配置失败:', error);
+                return null;
+            }
+        }
+
+        // ==========================================
+        // 第四步: 显示主题信息
+        // ==========================================
+        function displayThemeInfo(themeConfig) {
+            const container = document.getElementById('themeInfoContainer');
+
+            const modeBadge = themeConfig.mode === 'dark'
+                ? '<span class="badge badge-dark">🌙 暗色模式</span>'
+                : '<span class="badge badge-light">☀️ 亮色模式</span>';
+
+            container.innerHTML = `
+                <div class="theme-info">
+                    <div class="info-item">
+                        <label>主题模式</label>
+                        <div class="value">${themeConfig.mode}${modeBadge}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>主题预设 ID</label>
+                        <div class="value">${themeConfig.preset.id}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>主题名称</label>
+                        <div class="value">${themeConfig.preset.name}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>主题描述</label>
+                        <div class="value">${themeConfig.preset.description}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // 第五步: 显示颜色面板
+        // ==========================================
+        function displayColorPalette(themeConfig) {
+            const container = document.getElementById('colorPaletteContainer');
+
+            // 根据当前模式选择颜色
+            const colors = themeConfig.mode === 'dark'
+                ? themeConfig.preset.dark
+                : themeConfig.preset.light;
+
+            const colorNames = {
+                primary: '主色',
+                success: '成功色',
+                warning: '警告色',
+                danger: '危险色',
+                info: '信息色'
+            };
+
+            let html = '<div class="color-palette">';
+
+            Object.entries(colors).forEach(([key, value]) => {
+                const hslColor = `hsl(${value})`;
+                html += `
+                    <div class="color-item">
+                        <div class="color-swatch" style="background: ${hslColor};"></div>
+                        <div class="color-label">${colorNames[key] || key}</div>
+                        <div class="color-value">${value}</div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // ==========================================
+        // 工具函数
+        // ==========================================
+
+        // 添加日志
+        function addLog(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+
+            // 如果是第一条日志,清空空状态
+            if (container.querySelector('.empty-state')) {
+                container.innerHTML = '';
+            }
+
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+
+            const timestamp = new Date().toLocaleTimeString('zh-CN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+
+            entry.innerHTML = `
+                <span class="timestamp">[${timestamp}]</span>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 清空日志
+        function clearLogs() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '<div class="empty-state">暂无日志</div>';
+            addLog('日志已清空', 'info');
+        }
+
+        // ==========================================
+        // 第七步: 订阅主题变化
+        // ==========================================
+        function subscribeToThemeChanges() {
+            if (!checkSDK()) return;
+
+            try {
+                addLog('🔔 正在订阅主题变化...', 'info');
+
+                // 订阅主题变化事件
+                window.semApp.cdpSdk.onThemeChange((newThemeConfig) => {
+                    addLog('🎨 检测到主题变化', 'info');
+                    console.log('🎨 新主题配置:', newThemeConfig);
+
+                    // 更新当前主题配置
+                    currentThemeConfig = newThemeConfig;
+
+                    // 自动更新显示
+                    displayThemeInfo(newThemeConfig);
+                    displayColorPalette(newThemeConfig);
+
+                    // 自动应用新主题
+                    applyThemeToPage(newThemeConfig);
+
+                    addLog(`✅ 主题已自动同步 (${newThemeConfig.mode === 'dark' ? '暗色' : '亮色'}模式 - ${newThemeConfig.preset.name})`, 'success');
+                });
+
+                addLog('✅ 主题订阅成功,将自动同步变化', 'success');
+
+            } catch (error) {
+                addLog('❌ 订阅主题失败: ' + error.message, 'error');
+                console.error('订阅主题失败:', error);
+            }
+        }
+
+        // ==========================================
+        // 第七步: 应用主题到页面 (内部函数)
+        // ==========================================
+        function applyThemeToPage(themeConfig) {
+            const { mode, preset } = themeConfig;
+            const colors = mode === 'dark' ? preset.dark : preset.light;
+
+            // 应用 CSS 变量
+            const root = document.documentElement;
+
+            // 设置主题颜色
+            root.style.setProperty('--primary-color', `hsl(${colors.primary})`);
+            root.style.setProperty('--success-color', `hsl(${colors.success})`);
+            root.style.setProperty('--warning-color', `hsl(${colors.warning})`);
+            root.style.setProperty('--danger-color', `hsl(${colors.danger})`);
+            root.style.setProperty('--info-color', `hsl(${colors.info})`);
+
+            // 根据模式设置背景和文字颜色
+            if (mode === 'dark') {
+                root.style.setProperty('--bg-gradient', 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)');
+                root.style.setProperty('--card-bg', '#2d2d44');
+                root.style.setProperty('--text-primary', '#ffffff');
+                root.style.setProperty('--text-secondary', '#b8b8d1');
+                root.style.setProperty('--text-tertiary', '#8b8b9e');
+                root.style.setProperty('--info-bg', '#1e1e2f');
+                root.style.setProperty('--code-bg', '#1a1a2e');
+                root.style.setProperty('--code-text', '#d4d4d4');
+                root.style.setProperty('--log-bg', '#0f0f1e');
+                root.style.setProperty('--log-text', '#d4d4d4');
+            } else {
+                root.style.setProperty('--bg-gradient', `linear-gradient(135deg, hsl(${colors.primary}) 0%, hsl(${colors.info}) 100%)`);
+                root.style.setProperty('--card-bg', '#ffffff');
+                root.style.setProperty('--text-primary', '#333333');
+                root.style.setProperty('--text-secondary', '#666666');
+                root.style.setProperty('--text-tertiary', '#999999');
+                root.style.setProperty('--info-bg', '#f8f9fa');
+                root.style.setProperty('--code-bg', '#f5f5f5');
+                root.style.setProperty('--code-text', '#333333');
+                root.style.setProperty('--log-bg', '#1e1e1e');
+                root.style.setProperty('--log-text', '#d4d4d4');
+            }
+        }
+
+        // ==========================================
+        // 页面加载时初始化
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            addLog('📄 页面加载完成', 'info');
+            checkSDK();
+
+            // 自动获取初始主题并订阅变化
+            setTimeout(async () => {
+                // 获取并应用初始主题
+                await getInitialTheme();
+
+                // 订阅主题变化,实现自动同步
+                subscribeToThemeChanges();
+            }, 500);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动挂载/卸载 pageConfig 业务页面样例</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #f1f5f9;
+        }
+
+        /* 全屏渲染挂载点：整个页面就是业务页面 */
+        #lowcode-portal-anchor {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+
+        /* 悬浮「获取表单值」按钮 */
+        #btn-get-values {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 9999;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+        }
+
+        #btn-get-values:hover {
+            background: #1d4ed8;
+        }
+
+        /* 表单值展示面板 */
+        #value-panel {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            width: 340px;
+            max-width: calc(100vw - 48px);
+            max-height: 60vh;
+            overflow: auto;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+            font-size: 13px;
+            color: #1e293b;
+            opacity: 0;
+            transform: translateY(-10px) scale(0.98);
+            pointer-events: none;
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+
+        #value-panel.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        #value-panel .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-bottom: 1px solid #f1f5f9;
+            position: sticky;
+            top: 0;
+            background: #ffffff;
+            border-radius: 14px 14px 0 0;
+        }
+
+        #value-panel .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        #value-panel .panel-title::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+        }
+
+        #value-panel .panel-close {
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 15px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        #value-panel .panel-close:hover {
+            color: #475569;
+            background: #f1f5f9;
+        }
+
+        #value-panel .kv-list {
+            padding: 6px 18px 12px;
+        }
+
+        #value-panel .kv {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 16px;
+            padding: 9px 0;
+            border-bottom: 1px dashed #f1f5f9;
+        }
+
+        #value-panel .kv:last-child {
+            border-bottom: none;
+        }
+
+        #value-panel .k {
+            color: #64748b;
+            flex-shrink: 0;
+        }
+
+        #value-panel .v {
+            color: #0f172a;
+            font-weight: 500;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        #value-panel .empty-tip {
+            color: #94a3b8;
+            text-align: center;
+            padding: 14px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 挂载容器：页面加载后自动把 pageConfig 页面挂到这里 -->
+    <div id="lowcode-portal-anchor"></div>
+
+    <button id="btn-get-values">获取表单值</button>
+
+    <!-- 表单值展示面板 -->
+    <div id="value-panel">
+        <div class="panel-header">
+            <span class="panel-title">表单值</span>
+            <button id="value-panel-close" class="panel-close" title="关闭">✕</button>
+        </div>
+        <div class="kv-list" id="value-panel-body">
+            <div class="empty-tip">点击「获取表单值」查看结果</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnGetValues = document.getElementById('btn-get-values');
+            const valuePanel = document.getElementById('value-panel');
+            const valuePanelBody = document.getElementById('value-panel-body');
+            const valuePanelClose = document.getElementById('value-panel-close');
+
+            // 存放暴露出来的卸载句柄闭包
+            let unmountTargetPage = null;
+
+            // ==========================================
+            // 1. 页面配置 (pageConfig) —— 表单页 UI Schema
+            // ==========================================
+            const PAGE_CONFIG = {
+                "pageId": "销售阶段配置_表单",
+                "pageName": "销售阶段配置_表单",
+                "component": {
+                    "type": "Section",
+                    "id": "section_f4999a6b-aa23-4c3a-88c4-1293a673481e",
+                    "children": [
+                        {
+                            "type": "FlexBox",
+                            "id": "flex_box_e6d2d2fd-a11d-4fa7-b18d-2d1320c4ce2c",
+                            "props": {
+                                "direction": "column",
+                                "gap": 3
+                            },
+                            "children": [
+                                {
+                                    "type": "Form",
+                                    "id": "销售阶段配置_表单",
+                                    "children": [
+                                        {
+                                            "type": "Select",
+                                            "id": "阶段名称",
+                                            "props": {
+                                                "name": "阶段名称",
+                                                "label": "阶段名称",
+                                                "placeholder": "请输入阶段名称",
+                                                "required": false,
+                                                "options": [
+                                                    { "label": "测试1", "value": "测试1" },
+                                                    { "label": "测试2", "value": "测试2" },
+                                                    { "label": "测试3", "value": "测试3" },
+                                                    { "label": "测试4", "value": "测试4" },
+                                                    { "label": "测试5", "value": "测试5" }
+                                                ],
+                                                "filter": { "enable": true },
+                                                "defaultValue": {}
+                                            }
+                                        },
+                                        {
+                                            "type": "Input",
+                                            "id": "阶段描述",
+                                            "props": {
+                                                "name": "阶段描述",
+                                                "label": "阶段描述",
+                                                "value": "",
+                                                "defaultValue": "未开始",
+                                                "placeholder": "请输入阶段描述",
+                                                "required": false,
+                                                "disabled": false,
+                                                "type": null
+                                            },
+                                            "events": [
+                                                {
+                                                    "type": "valueChange",
+                                                    "instructionSet": {
+                                                        "instructions": [],
+                                                        "mode": "sequence"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "MultiSelect",
+                                            "id": "阶段编码",
+                                            "props": {
+                                                "name": "阶段编码",
+                                                "label": "阶段编码",
+                                                "placeholder": "请输入阶段编码",
+                                                "required": false,
+                                                "remoteOptionConfig": {
+                                                    "panelCode": "IML_00009",
+                                                    "fieldName": "阶段编码",
+                                                    "relatePanelCode": "IML_00007",
+                                                    "relateFieldName": "活动名称",
+                                                    "condition": {
+                                                        "活动类型": "电话营销"
+                                                    }
+                                                },
+                                                "multiple": true
+                                            }
+                                        },
+                                        {
+                                            "type": "InputNumber",
+                                            "id": "小数",
+                                            "props": {
+                                                "name": "小数",
+                                                "label": "小数",
+                                                "placeholder": "请输入小数",
+                                                "required": false
+                                            }
+                                        },
+                                        {
+                                            "type": "DatePicker",
+                                            "id": "预期完成概率",
+                                            "props": {
+                                                "name": "预期完成概率",
+                                                "label": "预期完成概率",
+                                                "value": "",
+                                                "placeholder": "请选择预期完成概率",
+                                                "required": false,
+                                                "disabled": false,
+                                                "dateFormat": "yyyy"
+                                            }
+                                        },
+                                        {
+                                            "type": "InputNumber",
+                                            "id": "状态",
+                                            "props": {
+                                                "name": "状态",
+                                                "label": "状态",
+                                                "value": "",
+                                                "placeholder": "请输入状态",
+                                                "required": false,
+                                                "disabled": false
+                                            }
+                                        },
+                                        {
+                                            "type": "Input",
+                                            "id": "默认阶段",
+                                            "props": {
+                                                "name": "默认阶段",
+                                                "label": "默认阶段",
+                                                "value": "",
+                                                "placeholder": "请输入默认阶段",
+                                                "required": false,
+                                                "disabled": false,
+                                                "type": null
+                                            }
+                                        }
+                                    ],
+                                    "props": {
+                                        "operations": [
+                                            {
+                                                "buttonName": "取消",
+                                                "buttonDisplayName": "取消",
+                                                "preventDefault": false
+                                            },
+                                            {
+                                                "buttonName": "保存",
+                                                "buttonDisplayName": "保存",
+                                                "preventDefault": false
+                                            },
+                                            {
+                                                "buttonName": "测试",
+                                                "buttonDisplayName": "测试",
+                                                "preventDefault": true,
+                                                "events": [
+                                                    {
+                                                        "type": "click",
+                                                        "instructions": [
+                                                            {
+                                                                "type": "ui.confirm",
+                                                                "params": {
+                                                                    "title": "测试"
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        "_buttonsInjected": true,
+                                        "permissionLoad": {
+                                            "source": "event"
+                                        }
+                                    },
+                                    "events": [
+                                        {
+                                            "type": "mount",
+                                            "instructionSet": {
+                                                "instructions": [
+                                                    {
+                                                        "type": "flow.script",
+                                                        "params": {
+                                                            "type": "JSFunction",
+                                                            "value": "async function(__ctx__) { console.log(\"----表单渲染----\"); }"
+                                                        },
+                                                        "description": "console.log(\"----表单渲染----\")"
+                                                    }
+                                                ],
+                                                "mode": "sequence"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "props": {}
+                },
+                "pageSelfData": {
+                    "dataSource": []
+                }
+            };
+
+            // ==========================================
+            // 2. 初始值 (pageInitialData) —— 按表单字段 name 注入
+            // ==========================================
+            const PAGE_INITIAL_DATA = {
+                "阶段名称": "测试1",
+                "阶段描述": "未开始",
+                "阶段编码": ["阶段编码A", "阶段编码B"],
+                "小数": 3.14,
+                "预期完成概率": "2026",
+                "状态": 1,
+                "默认阶段": "否"
+            };
+
+            // ==========================================
+            // 自动挂载：页面加载后直接挂载，无需用户操作
+            // ==========================================
+            (async function autoMount() {
+                // 读取当前环境的 SDK 引用 (假设由 CDP 环境或者 iframe srcdoc 自动注入)
+                const sdk = window.semApp?.cdpSdk;
+
+                if (!sdk) {
+                    console.error('未检测到 cdp-sdk 环境。请确保此样例在低代码开发台的 CustomShell 环境中运行。');
+                    return;
+                }
+
+                try {
+                    /**
+                     * ⚡️ 核心 API: 按需挂载页面并下发 pageConfig
+                     *
+                     * sdk.controllers.portal.mountPage({
+                     *     panelCode?,      // 可选：面板标识（作为页面身份，宿主构建的 panelConfig.metadata.panelCode 优先取它）
+                     *     pageId,          // 页面 ID（pageConfig 存在时优先取 pageConfig.pageId）
+                     *     containerId,     // 渲染容器（目标 DOM 选择器）
+                     *     pageConfig,      // 🆕 页面配置（UI Schema），宿主基于它构建独立 panelConfig 渲染
+                     *     pageInitialData, // 初始值，按表单字段 name 注入
+                     *     pageInputs,      // 可选：页面参数
+                     *     formMode         // 可选：表单模式
+                     * })
+                     */
+                    unmountTargetPage = await sdk.controllers.portal.mountPage({
+                        panelCode: 'IML_00009',             // 面板标识（可选，作为面板身份）
+                        pageId: '销售阶段配置_表单',
+                        containerId: '#lowcode-portal-anchor',
+                        pageConfig: PAGE_CONFIG,            // 🆕 下发的页面配置
+                        pageInitialData: PAGE_INITIAL_DATA   // 初始值
+                    });
+                } catch (error) {
+                    console.error('页面挂载失败:', error);
+                }
+            })();
+
+            // ==========================================
+            // 表单值展示
+            // ==========================================
+            const escapeHtml = (s) =>
+                String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+            const formatValue = (v) => {
+                if (Array.isArray(v)) return v.length ? v.map(formatValue).join(', ') : '—';
+                if (v === null || v === undefined || v === '') return '—';
+                if (typeof v === 'object') {
+                    try {
+                        const json = JSON.stringify(v);
+                        return json && json !== '{}' ? json : '—';
+                    } catch {
+                        return String(v);
+                    }
+                }
+                return String(v);
+            };
+
+            const renderValues = (values) => {
+                const entries = Object.entries(values || {});
+                if (entries.length === 0) {
+                    valuePanelBody.innerHTML = '<div class="empty-tip">暂无数据</div>';
+                    return;
+                }
+                valuePanelBody.innerHTML = entries
+                    .map(([k, v]) => `<div class="kv"><span class="k">${escapeHtml(k)}</span><span class="v">${escapeHtml(formatValue(v))}</span></div>`)
+                    .join('');
+            };
+
+            // ==========================================
+            // 获取表单值
+            // ==========================================
+            btnGetValues.addEventListener('click', async () => {
+                const sdk = window.semApp?.cdpSdk;
+                if (!sdk) {
+                    alert('未检测到 cdp-sdk 环境。');
+                    return;
+                }
+
+                try {
+                    // ⚡️ 核心 API: 调用目标组件动作，获取表单值
+                    const values = await sdk.dispatch({
+                        type: "component.invoke",
+                        target: "销售阶段配置_表单",
+                        action: "getValue"
+                    });
+
+                    console.log('表单值:', values);
+                    renderValues(values);
+                    valuePanel.classList.add('show');
+                } catch (error) {
+                    console.error('获取表单值失败:', error);
+                    valuePanelBody.innerHTML = `<div class="empty-tip">获取失败：${escapeHtml(error.message)}</div>`;
+                    valuePanel.classList.add('show');
+                }
+            });
+
+            // 关闭面板
+            valuePanelClose.addEventListener('click', () => {
+                valuePanel.classList.remove('show');
+            });
+
+            // ==========================================
+            // 自动卸载：页面离开（关闭/跳转/缓存）时清理挂载的实例
+            // ==========================================
+            const autoUnmount = () => {
+                if (!unmountTargetPage) return;
+                const fn = unmountTargetPage;
+                unmountTargetPage = null;
+                // ⚡️ 核心 API: 执行释放闭包，向主应用发出卸载销毁请求
+                fn().catch(error => console.error('自动卸载失败:', error));
+            };
+
+            // pagehide 覆盖正常关闭、跳转与 bfcache 场景；beforeunload 作为兜底
+            window.addEventListener('pagehide', autoUnmount);
+            window.addEventListener('beforeunload', autoUnmount);
+        });
+    </script>
+</body>
+
+</html>

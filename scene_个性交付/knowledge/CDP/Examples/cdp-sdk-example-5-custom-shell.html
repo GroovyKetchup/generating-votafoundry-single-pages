@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Shell 样例</title>
+
+    <!-- 
+      ℹ️ 样式说明:
+      - 主应用样式会通过 ComponentPortal 自动注入到 iframe
+      - 这样可以支持开发环境和生产环境(文件名哈希)
+      - 下面只需要定义 CustomShell 自己的布局样式
+    -->
+
+    <!-- 自定义 Shell 布局样式 -->
+    <style>
+        /* ========================================
+           CDP 主题 CSS 变量
+           ======================================== */
+        :root {
+            /* 默认浅色主题变量 (CDP 会动态注入) */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #f9fafb;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-tertiary: #9ca3af;
+            --border-color: #e5e7eb;
+            --primary-color: hsl(217, 91%, 60%);
+            --sidebar-bg: #f5f5f5;
+            --sidebar-border: #e4e4e7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            background: var(--bg-secondary);
+        }
+
+        /* 侧边栏菜单 */
+        .sidebar {
+            width: 240px;
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--sidebar-border);
+        }
+
+        .sidebar-header {
+            height: 60px;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--sidebar-border);
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar-logo {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--sidebar-text);
+        }
+
+        .menu-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .menu-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--sidebar-text-secondary);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-item:hover {
+            background: var(--sidebar-hover);
+            color: var(--sidebar-text);
+        }
+
+        .menu-item.active {
+            background: var(--primary-color);
+            color: #fff;
+        }
+
+        .menu-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .menu-icon {
+            width: 16px;
+            height: 16px;
+            opacity: 0.7;
+        }
+
+        .menu-group {
+            margin-top: 20px;
+        }
+
+        .menu-group-title {
+            padding: 8px 20px;
+            font-size: 12px;
+            color: var(--sidebar-text-tertiary);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* 菜单骨架屏 */
+        .menu-skeleton {
+            padding: 10px 20px;
+        }
+
+        .skeleton-item {
+            height: 40px;
+            background: linear-gradient(90deg,
+                    var(--sidebar-border) 0%,
+                    var(--sidebar-hover) 50%,
+                    var(--sidebar-border) 100%);
+            background-size: 200% 100%;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            animation: skeleton-loading 1.5s ease-in-out infinite;
+        }
+
+        .skeleton-item:last-child {
+            margin-bottom: 0;
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* 菜单加载和错误状态 */
+        .menu-status {
+            padding: 20px;
+            text-align: center;
+            color: var(--sidebar-text-secondary);
+            font-size: 14px;
+        }
+
+        .menu-status.loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-status.error {
+            color: var(--danger-color);
+        }
+
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--sidebar-border);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            height: 60px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            gap: 24px;
+        }
+
+        /* 命令搜索 - 居中 */
+        .command-search {
+            flex: 1;
+            max-width: 500px;
+            position: relative;
+            cursor: pointer;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            width: 100%;
+            height: 38px;
+            padding: 0 40px 0 40px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+            background: #f9fafb;
+            cursor: pointer;
+        }
+
+        .search-input:hover {
+            border-color: #2563eb;
+            background: #fff;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            pointer-events: none;
+        }
+
+        .search-shortcut {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: #9ca3af;
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        /* 右侧工具栏 */
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* 主题切换按钮 */
+        .theme-button {
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .theme-button:hover {
+            background: var(--bg-primary);
+            border-color: var(--primary-color);
+        }
+
+        .theme-icon {
+            font-size: 16px;
+        }
+
+        /* 主题下拉菜单 */
+        .theme-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .theme-button.open .theme-dropdown {
+            display: block;
+        }
+
+        .theme-section {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .theme-section:last-child {
+            border-bottom: none;
+        }
+
+        .theme-section-title {
+            padding: 8px 16px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .theme-option {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .theme-option:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .theme-option.active {
+            background: var(--bg-tertiary);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .theme-option-check {
+            font-size: 16px;
+            opacity: 0;
+        }
+
+        .theme-option.active .theme-option-check {
+            opacity: 1;
+        }
+
+        /* AI 助手按钮 */
+        .ai-button {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+        }
+
+        .ai-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .ai-button:active {
+            transform: translateY(0);
+        }
+
+        .ai-icon {
+            font-size: 16px;
+        }
+
+        /* 用户信息 */
+        .user-menu {
+            position: relative;
+        }
+
+        .user-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .user-button:hover {
+            background: #fff;
+            border-color: #2563eb;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-name {
+            font-size: 14px;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .dropdown-arrow {
+            font-size: 12px;
+            color: #9ca3af;
+            transition: transform 0.2s;
+        }
+
+        .user-menu.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* 下拉菜单 */
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            min-width: 180px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .user-menu.open .user-dropdown {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #1a1a1a;
+        }
+
+        .dropdown-item:hover {
+            background: #f9fafb;
+        }
+
+        .dropdown-item:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .dropdown-item:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+
+        .dropdown-item.danger {
+            color: #dc2626;
+        }
+
+        .dropdown-item.danger:hover {
+            background: #fee2e2;
+        }
+
+        /* 内容区域 */
+        .content-area {
+            flex: 1;
+            overflow: hidden;
+            /* 改为 hidden,让内部内容自己控制滚动 */
+            padding: 0;
+            /* 移除 padding */
+        }
+
+        /* Portal 渲染目标容器 */
+        #content-area {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 侧边栏菜单 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">📊 应用名称</div>
+            </div>
+            <nav class="menu-list">
+                <!-- 菜单将通过 JavaScript 动态渲染 -->
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <div class="command-search">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" placeholder="搜索命令或功能..." readonly />
+                    <span class="search-shortcut">Ctrl+K</span>
+                </div>
+
+                <div class="toolbar-right">
+                    <!-- 主题切换 -->
+                    <div class="theme-button" id="theme-button" onclick="toggleThemeMenu()">
+                        <span class="theme-icon" id="theme-icon">🌙</span>
+                        <div class="theme-dropdown">
+                            <div class="theme-section">
+                                <div class="theme-section-title">主题模式</div>
+                                <div id="theme-modes-container"></div>
+                            </div>
+                            <div class="theme-section">
+                                <div class="theme-section-title">主题预设</div>
+                                <div id="theme-presets-container"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="ai-button">
+                        <span class="ai-icon">✨</span>
+                        <span>AI 助手</span>
+                    </button>
+
+                    <div class="user-menu">
+                        <div class="user-button" onclick="toggleUserMenu()">
+                            <div class="user-avatar" id="user-avatar">U</div>
+                            <span class="user-name" id="user-name">用户</span>
+                            <span class="dropdown-arrow">▼</span>
+                        </div>
+                        <div class="user-dropdown">
+                            <div class="dropdown-item danger" onclick="handleLogout()">
+                                <span>🚪</span>
+                                <span>退出登录</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 内容区域 -->
+            <div class="content-area">
+                <!-- 🔥 Portal 渲染目标容器 -->
+                <div id="content-area"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 
+        ==========================================
+        SDK 引入
+        ==========================================
+        注意: 如果此页面是通过 ExternalPage 组件(面板网页)嵌入的,
+        CDP 会自动注入 SDK,无需手动引入下面的 script 标签。
+        
+        如果是其他外部链接嵌入的页面,需要手动引入:
+    -->
+    <!-- <script src="https://kwaidoo.com/cdn_cdp/sdk/cdp_sdk/cdp-sdk-1.4.1.min.js"></script> -->
+    <script>
+        // 全局变量
+        let menuController = null;
+        let currentSdk = null;
+        let currentThemeState = null;
+
+        /**
+         * 🔔 显示 Toast 提示(带降级处理)
+         * @param {string} message - 提示消息
+         * @param {object} options - 选项
+         * @param {string} options.type - 类型: 'success' | 'error' | 'warning' | 'info'
+         * @param {string} options.description - 详细描述
+         * @param {number} options.duration - 显示时长(毫秒)
+         */
+        async function showToast(message, options = {}) {
+            const { type = 'info', description, duration } = options;
+
+            // 优先使用 SDK 的 toast 方法
+            if (currentSdk && typeof currentSdk.toast === 'function') {
+                try {
+                    await currentSdk.toast(message, { type, description, duration });
+                    return;
+                } catch (error) {
+                    console.error('[CustomShell] Toast 调用失败:', error);
+                }
+            }
+
+            // 降级方案:使用原生 Toast
+            showNativeToast(message, { type, description, duration });
+        }
+
+        /**
+         * 📢 原生 Toast 实现(降级方案)
+         */
+        function showNativeToast(message, options = {}) {
+            const { type = 'info', description, duration = 3000 } = options;
+
+            // 创建 Toast 容器(如果不存在)
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                `;
+                document.body.appendChild(container);
+            }
+
+            // 创建 Toast 元素
+            const toast = document.createElement('div');
+            const colors = {
+                success: { bg: '#10b981', icon: '✅' },
+                error: { bg: '#ef4444', icon: '❌' },
+                warning: { bg: '#f59e0b', icon: '⚠️' },
+                info: { bg: '#3b82f6', icon: 'ℹ️' }
+            };
+            const color = colors[type] || colors.info;
+
+            toast.style.cssText = `
+                background: ${color.bg};
+                color: white;
+                padding: 12px 16px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                min-width: 250px;
+                max-width: 400px;
+                animation: slideIn 0.3s ease-out;
+            `;
+
+            toast.innerHTML = `
+                <div style="display: flex; align-items: start; gap: 8px;">
+                    <span style="font-size: 16px;">${color.icon}</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; margin-bottom: 4px;">${message}</div>
+                        ${description ? `<div style="font-size: 13px; opacity: 0.9;">${description}</div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            // 添加动画
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            if (!document.getElementById('toast-styles')) {
+                style.id = 'toast-styles';
+                document.head.appendChild(style);
+            }
+
+            container.appendChild(toast);
+
+            // 自动移除
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    container.removeChild(toast);
+                    if (container.children.length === 0) {
+                        document.body.removeChild(container);
+                    }
+                }, 300);
+            }, duration);
+
+            // 记录到 console
+            const emoji = color.icon;
+            const logMethod = type === 'error' ? 'error' : type === 'warning' ? 'warn' : 'log';
+            console[logMethod](`${emoji} ${message}${description ? ': ' + description : ''}`);
+        }
+
+        // 🎨 切换主题菜单
+        function toggleThemeMenu() {
+            const themeButton = document.getElementById('theme-button');
+            themeButton.classList.toggle('open');
+        }
+
+        // 🎨 应用主题到页面
+        function applyTheme(themeState) {
+            const { effectiveMode, currentColors } = themeState;
+            const colors = effectiveMode === 'dark' ? currentColors.dark : currentColors.light;
+
+            // 应用 CSS 变量
+            const root = document.documentElement;
+            root.style.setProperty('--primary-color', `hsl(${colors.primary})`);
+            root.style.setProperty('--success-color', `hsl(${colors.success})`);
+            root.style.setProperty('--warning-color', `hsl(${colors.warning})`);
+            root.style.setProperty('--danger-color', `hsl(${colors.danger})`);
+            root.style.setProperty('--info-color', `hsl(${colors.info})`);
+
+            // 根据模式设置背景和文字颜色
+            if (effectiveMode === 'dark') {
+                root.style.setProperty('--bg-primary', '#1e1e2e');
+                root.style.setProperty('--bg-secondary', '#16162a');
+                root.style.setProperty('--bg-tertiary', '#2a2a3e');
+                root.style.setProperty('--text-primary', '#ffffff');
+                root.style.setProperty('--text-secondary', '#b8b8d1');
+                root.style.setProperty('--text-tertiary', '#8b8b9e');
+                root.style.setProperty('--border-color', '#3a3a4e');
+                // 侧边栏 - 深色模式
+                root.style.setProperty('--sidebar-bg', '#0a101f');
+                root.style.setProperty('--sidebar-border', '#2a2a3e');
+                root.style.setProperty('--sidebar-text', '#ffffff');
+                root.style.setProperty('--sidebar-text-secondary', '#ffffff');
+                root.style.setProperty('--sidebar-text-tertiary', '#8b8b9e');
+                root.style.setProperty('--sidebar-hover', '#2a2a3e');
+            } else {
+                root.style.setProperty('--bg-primary', '#ffffff');
+                root.style.setProperty('--bg-secondary', '#f5f5f5');
+                root.style.setProperty('--bg-tertiary', '#f9fafb');
+                root.style.setProperty('--text-primary', '#1a1a1a');
+                root.style.setProperty('--text-secondary', '#666666');
+                root.style.setProperty('--text-tertiary', '#9ca3af');
+                root.style.setProperty('--border-color', '#e5e7eb');
+                // 侧边栏 - 浅色模式
+                root.style.setProperty('--sidebar-bg', '#f9fafb');
+                root.style.setProperty('--sidebar-border', '#e5e7eb');
+                root.style.setProperty('--sidebar-text', '#1a1a1a');
+                root.style.setProperty('--sidebar-text-secondary', '#666666');
+                root.style.setProperty('--sidebar-text-tertiary', '#9ca3af');
+                root.style.setProperty('--sidebar-hover', '#f3f4f6');
+            }
+
+            // 更新主题图标
+            const themeIcon = document.getElementById('theme-icon');
+            if (themeIcon) {
+                themeIcon.textContent = effectiveMode === 'dark' ? '🌙' : '☀️';
+            }
+        }
+
+        // 🎨 订阅主题变化
+        async function subscribeTheme(sdk) {
+            try {
+                // 获取初始主题状态
+                currentThemeState = await sdk.app.theme.getState();
+                applyTheme(currentThemeState);
+
+                // 加载主题选项
+                await loadThemeOptions(sdk);
+
+                // 订阅主题变化
+                sdk.app.theme.onChange((state) => {
+                    console.log('[CustomShell] 主题变化:', state);
+                    currentThemeState = state;
+                    applyTheme(state);
+                    updateThemeUI(state);
+                });
+            } catch (error) {
+                console.error('[CustomShell] 订阅主题失败:', error);
+                // 主题订阅失败不阻塞应用,使用默认样式继续运行
+                await showToast('主题加载失败', {
+                    type: 'warning',
+                    description: '将使用默认样式'
+                });
+            }
+        }
+
+        // 🎨 加载主题选项
+        async function loadThemeOptions(sdk) {
+            try {
+                // 获取主题模式
+                const modes = await sdk.app.theme.getModes();
+                const modesContainer = document.getElementById('theme-modes-container');
+
+                const modeLabels = {
+                    'system': '🖥️ 跟随系统',
+                    'light': '☀️ 浅色',
+                    'dark': '🌙 深色'
+                };
+
+                modesContainer.innerHTML = modes.map(mode => `
+                    <div class="theme-option ${currentThemeState?.mode === mode ? 'active' : ''}" 
+                         data-mode="${mode}" 
+                         onclick="changeThemeMode('${mode}')">
+                        <span>${modeLabels[mode] || mode}</span>
+                        <span class="theme-option-check">✓</span>
+                    </div>
+                `).join('');
+
+                // 获取主题预设
+                const presets = await sdk.app.theme.getPresets();
+                const presetsContainer = document.getElementById('theme-presets-container');
+
+                presetsContainer.innerHTML = presets.map(preset => `
+                    <div class="theme-option ${currentThemeState?.activePresetId === preset.id ? 'active' : ''}" 
+                         data-preset="${preset.id}" 
+                         onclick="changeThemePreset('${preset.id}')">
+                        <span>${preset.name}</span>
+                        <span class="theme-option-check">✓</span>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('[CustomShell] 加载主题选项失败:', error);
+            }
+        }
+
+        // 🎨 更新主题 UI
+        function updateThemeUI(state) {
+            // 更新模式选中状态
+            document.querySelectorAll('[data-mode]').forEach(el => {
+                el.classList.toggle('active', el.dataset.mode === state.mode);
+            });
+
+            // 更新预设选中状态
+            document.querySelectorAll('[data-preset]').forEach(el => {
+                el.classList.toggle('active', el.dataset.preset === state.activePresetId);
+            });
+        }
+
+        // 🎨 切换主题模式
+        async function changeThemeMode(mode) {
+            if (!currentSdk) return;
+            try {
+                await currentSdk.app.theme.setMode(mode);
+            } catch (error) {
+                console.error('[CustomShell] 切换模式失败:', error);
+                await showToast('切换主题模式失败', {
+                    type: 'error',
+                    description: error.message
+                });
+            }
+        }
+
+        // 🎨 切换主题预设
+        async function changeThemePreset(presetId) {
+            if (!currentSdk) return;
+            try {
+                await currentSdk.app.theme.setPreset(presetId);
+            } catch (error) {
+                console.error('[CustomShell] 切换预设失败:', error);
+                await showToast('切换主题预设失败', {
+                    type: 'error',
+                    description: error.message
+                });
+            }
+        }
+
+        // 👤 切换用户菜单
+        function toggleUserMenu() {
+            const userMenu = document.querySelector('.user-menu');
+            userMenu.classList.toggle('open');
+        }
+
+        // 🚪 处理登出
+        async function handleLogout() {
+            if (!currentSdk) return;
+            try {
+                await currentSdk.app.logout();
+            } catch (error) {
+                console.error('[CustomShell] 登出失败:', error);
+                await showToast('登出失败', {
+                    type: 'error',
+                    description: '请重试'
+                });
+            }
+        }
+
+        // 👤 加载用户信息
+        async function loadUserInfo(sdk) {
+            try {
+                const currentUser = await sdk.data.auth.getCurrentUser();
+                if (currentUser) {
+                    const userName = document.getElementById('user-name');
+                    const userAvatar = document.getElementById('user-avatar');
+                    if (userName) userName.textContent = currentUser.name || '用户';
+                    if (userAvatar) userAvatar.textContent = (currentUser.name || 'U')[0].toUpperCase();
+                }
+            } catch (error) {
+                console.error('[CustomShell] 获取用户信息失败:', error);
+                await showToast('获取用户信息失败', {
+                    type: 'warning',
+                    description: '将显示默认用户信息'
+                });
+            }
+        }
+
+        // 点击外部关闭菜单
+        document.addEventListener('click', function (e) {
+            // 关闭用户菜单
+            const userMenu = document.querySelector('.user-menu');
+            if (userMenu && !userMenu.contains(e.target)) {
+                userMenu.classList.remove('open');
+            }
+
+            // 关闭主题菜单
+            const themeButton = document.getElementById('theme-button');
+            if (themeButton && !themeButton.contains(e.target)) {
+                themeButton.classList.remove('open');
+            }
+        });
+
+        // 🎨 初始化主题
+        async function initTheme(sdk) {
+            try {
+                await subscribeTheme(sdk);
+            } catch (error) {
+                // 主题初始化失败不阻塞应用
+                console.error('[CustomShell] 主题初始化失败:', error);
+            }
+        }
+
+        //  初始化应用配置
+        async function initApp(sdk) {
+            try {
+                const appConfig = await sdk.data.getAppConfig();
+                // 更新应用名称
+                if (appConfig?.appName) {
+                    document.querySelector('.sidebar-logo').textContent = `📊 ${appConfig.appName}`;
+                }
+            } catch (error) {
+                console.error('[CustomShell] 获取应用配置失败:', error);
+                await showToast('获取应用配置失败', {
+                    type: 'warning',
+                    description: '将显示默认标题'
+                });
+            }
+        }
+
+        // 📋 初始化菜单
+        async function initMenu(sdk) {
+            const menuList = document.querySelector('.menu-list');
+
+            try {
+                // 显示骨架屏
+                menuList.innerHTML = `
+            <div class="menu-skeleton">
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+                <div class="skeleton-item"></div>
+            </div>
+        `;
+
+                const menu = await sdk.data.getMenu();
+
+                // 初始化菜单控制器
+                if (menu) {
+                    await initMenuController(sdk, menu);
+                } else {
+                    throw new Error('菜单加载失败');
+                }
+            } catch (error) {
+                console.error('[CustomShell] 菜单初始化失败:', error);
+                await showToast('菜单加载失败', {
+                    type: 'error',
+                    description: '请刷新页面重试'
+                });
+                // 清空菜单区域
+                menuList.innerHTML = '';
+            }
+        }
+
+        // 👤 初始化用户信息
+        async function initUser(sdk) {
+            await loadUserInfo(sdk);
+        }
+
+        // 等待 CDP SDK 加载
+        window.addEventListener('load', function () {
+            const sdk = window.semApp?.cdpSdk;
+            if (!sdk) {
+                console.error('CDP SDK 未加载');
+                return;
+            }
+
+            currentSdk = sdk;
+
+            // 🔥 并行初始化:用户信息、主题、应用配置、菜单
+            // 各模块独立处理错误,互不影响
+            Promise.allSettled([
+                initUser(sdk),
+                initTheme(sdk),
+                initApp(sdk),
+                initMenu(sdk)
+            ]).then(() => {
+                console.log('[CustomShell] ✅ 初始化完成');
+            });
+        });
+
+        // 🔥 页面卸载时清理资源
+        window.addEventListener('beforeunload', function () {
+            if (menuController) {
+                menuController.destroy();
+                console.log('[CustomShell] MenuController 已清理');
+            }
+        });
+
+
+        // 🔥 初始化菜单控制器
+        async function initMenuController(sdk, menuTree) {
+            const menuList = document.querySelector('.menu-list');
+
+            try {
+                // 🔥 创建菜单控制器
+                menuController = sdk.controllers.createMenu();
+
+                // 🔥 重要:先订阅状态变化,再初始化
+                // 这样可以监听到 init() 内部的初始状态通知
+                menuController.onStateChange((state) => {
+                    renderMenu(state);  // 只渲染菜单,内容由 MenuController 自动渲染
+                });
+
+                // 🔥 初始化菜单树并配置自动渲染 (现在是异步的)
+                await menuController.init(menuTree, {
+                    contentContainer: '#content-area',  // 指定内容容器
+                });
+
+                console.log('[CustomShell] 菜单控制器初始化成功');
+            } catch (error) {
+                console.error('[CustomShell] 菜单控制器初始化失败:', error);
+
+                // 清空菜单区域
+                menuList.innerHTML = '';
+
+                // 使用封装的 toast 方法提示错误
+                await showToast('菜单加载失败', {
+                    type: 'error',
+                    description: error.message || '未知错误'
+                });
+            }
+        }
+
+        // 🔥 根据 ID 查找菜单项(用于点击事件)
+        function findMenuItemById(items, id) {
+            for (const item of items) {
+                if (item.id === id) return item;
+                if (item.children) {
+                    const found = findMenuItemById(item.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+
+        // 🔥 渲染菜单 (基于 MenuController 状态)
+        function renderMenu(state) {
+            const menuList = document.querySelector('.menu-list');
+            menuList.innerHTML = '';
+
+            const { menuTree, activeId } = state;
+
+            if (!menuTree || menuTree.length === 0) {
+                // 空列表状态
+                menuList.innerHTML = `
+                    <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--sidebar-text-secondary);">
+                        <div>暂无菜单</div>
+                    </div>
+                `;
+                return;
+            }
+
+            menuTree.forEach((item, index) => {
+                if (item.type === 'group' || item.type === 'Folder') {
+                    // 渲染分组
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'menu-group';
+
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'menu-group-title';
+                    titleDiv.textContent = item.title;
+                    groupDiv.appendChild(titleDiv);
+
+                    // 渲染子菜单
+                    if (item.children && item.children.length > 0) {
+                        item.children.forEach(child => {
+                            const menuItem = createMenuItem(child, activeId);
+                            groupDiv.appendChild(menuItem);
+                        });
+                    }
+
+                    menuList.appendChild(groupDiv);
+                } else {
+                    // 渲染普通菜单项
+                    const menuItem = createMenuItem(item, activeId);
+                    menuList.appendChild(menuItem);
+                }
+            });
+        }
+
+        // 🔥 创建菜单项 (使用 MenuController)
+        function createMenuItem(item, activeId) {
+            const div = document.createElement('div');
+            div.className = 'menu-item' + (item.id === activeId ? ' active' : '');
+
+            const icon = document.createElement('span');
+            icon.className = 'menu-icon';
+            icon.textContent = item.icon || '📄';
+
+            const text = document.createElement('span');
+            text.textContent = item.title;
+
+            div.appendChild(icon);
+            div.appendChild(text);
+
+            // 🔥 点击事件 - 使用 MenuController.select()
+            div.addEventListener('click', async function () {
+                if (menuController) {
+                    await menuController.select(item);
+                    console.log('选择菜单:', item);
+                }
+            });
+
+            return div;
+        }
+
+        // 搜索框点击事件 - 打开命令面板
+        document.querySelector('.search-input').addEventListener('click', async function (e) {
+            e.preventDefault();
+            const sdk = window.semApp?.cdpSdk;
+            if (sdk) {
+                try {
+                    await sdk.ui.commandPalette.open();
+                } catch (error) {
+                    console.error('[CustomShell] 打开命令面板失败:', error);
+                    await showToast('无法打开命令面板', { type: 'error' });
+                }
+            }
+        });
+
+        // AI 助手按钮点击
+        document.querySelector('.ai-button').addEventListener('click', async function () {
+            const sdk = window.semApp?.cdpSdk;
+            if (sdk) {
+                try {
+                    await sdk.ui.aiAssistant.open();
+                } catch (error) {
+                    console.error('[CustomShell] 切换AI助手失败:', error);
+                    await showToast('无法打开AI助手', { type: 'error' });
+                }
+            }
+        });
+
+        // 搜索框快捷键
+        document.addEventListener('keydown', async function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                const sdk = window.semApp?.cdpSdk;
+                if (sdk) {
+                    try {
+                        await sdk.ui.commandPalette.open();
+                    } catch (error) {
+                        console.error('[CustomShell] 打开命令面板失败:', error);
+                        // 快捷键失败可以轻微提示
+                        await showToast('无法打开命令面板', { type: 'error' });
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

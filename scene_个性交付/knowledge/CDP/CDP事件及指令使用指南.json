@@ -1,0 +1,1043 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "指令系统配置规范",
+    "description": "完整的事件配置和指令系统 JSON Schema",
+    "version": "2.0.0",
+    "lastUpdated": "2025-12-27",
+    "definitions": {
+        "EventConfig": {
+            "type": "object",
+            "description": "事件配置对象",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "事件类型(基于 EngineEventProtocol)",
+                    "enum": [
+                        "mount",
+                        "unmount",
+                        "click",
+                        "focus",
+                        "blur",
+                        "valueChange",
+                        "itemClick",
+                        "itemDoubleClick",
+                        "itemRightClick",
+                        "itemLongPress"
+                    ]
+                },
+                "instructions": {
+                    "type": "array",
+                    "description": "事件触发时执行的指令列表",
+                    "items": {
+                        "$ref": "#/definitions/Instruction"
+                    }
+                },
+                "condition": {
+                    "$ref": "#/definitions/JSExpression",
+                    "description": "事件执行条件,返回 true 时才执行指令"
+                },
+                "debounce": {
+                    "type": "number",
+                    "description": "防抖延迟(毫秒),适用于高频事件如 valueChange"
+                },
+                "throttle": {
+                    "type": "number",
+                    "description": "节流间隔(毫秒),适用于高频事件"
+                },
+                "debug": {
+                    "type": "boolean",
+                    "description": "是否启用调试模式,会输出详细日志"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "事件配置的说明文档"
+                }
+            }
+        },
+        "Instruction": {
+            "type": "object",
+            "description": "指令对象",
+            "required": [
+                "type"
+            ],
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/ComponentInvokeInstruction"
+                },
+                {
+                    "$ref": "#/definitions/ComponentGetValueInstruction"
+                },
+                {
+                    "$ref": "#/definitions/ComponentSetValueInstruction"
+                },
+                {
+                    "$ref": "#/definitions/FlowBranchInstruction"
+                },
+                {
+                    "$ref": "#/definitions/FlowScriptInstruction"
+                },
+                {
+                    "$ref": "#/definitions/UiToastInstruction"
+                },
+                {
+                    "$ref": "#/definitions/UiModalOpenInstruction"
+                },
+                {
+                    "$ref": "#/definitions/UiModalCloseInstruction"
+                },
+                {
+                    "$ref": "#/definitions/SysSdkInvokeInstruction"
+                }
+            ]
+        },
+        "ComponentInvokeInstruction": {
+            "type": "object",
+            "description": "调用组件方法指令",
+            "required": [
+                "type",
+                "target",
+                "action"
+            ],
+            "properties": {
+                "type": {
+                    "const": "component.invoke"
+                },
+                "target": {
+                    "type": "string",
+                    "description": "目标组件ID"
+                },
+                "action": {
+                    "type": "string",
+                    "description": "要调用的组件动作名称"
+                },
+                "params": {
+                    "type": "object",
+                    "description": "动作参数,根据具体动作而定"
+                },
+                "resultKey": {
+                    "type": "string",
+                    "description": "结果存储键,用于后续指令引用"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "指令说明"
+                }
+            },
+            "examples": [
+                {
+                    "type": "component.invoke",
+                    "target": "form_1",
+                    "action": "updateFields",
+                    "params": {
+                        "updates": [
+                            {
+                                "field": "name",
+                                "value": "张三"
+                            },
+                            {
+                                "field": "age",
+                                "value": 25
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "component.invoke",
+                    "target": "table_1",
+                    "action": "refresh"
+                }
+            ]
+        },
+        "ComponentGetValueInstruction": {
+            "type": "object",
+            "description": "获取组件值指令",
+            "required": [
+                "type",
+                "target"
+            ],
+            "properties": {
+                "type": {
+                    "const": "component.getValue"
+                },
+                "target": {
+                    "type": "string",
+                    "description": "目标组件ID"
+                },
+                "resultKey": {
+                    "type": "string",
+                    "description": "结果存储键,必须指定才能在后续指令中使用"
+                }
+            },
+            "examples": [
+                {
+                    "type": "component.getValue",
+                    "target": "input_name",
+                    "resultKey": "userName"
+                }
+            ]
+        },
+        "ComponentSetValueInstruction": {
+            "type": "object",
+            "description": "设置组件值指令",
+            "required": [
+                "type",
+                "target",
+                "params"
+            ],
+            "properties": {
+                "type": {
+                    "const": "component.setValue"
+                },
+                "target": {
+                    "type": "string",
+                    "description": "目标组件ID"
+                },
+                "params": {
+                    "description": "要设置的值,可以是任意类型或 JSExpression"
+                }
+            },
+            "examples": [
+                {
+                    "type": "component.setValue",
+                    "target": "input_name",
+                    "params": "张三"
+                },
+                {
+                    "type": "component.setValue",
+                    "target": "input_age",
+                    "params": {
+                        "type": "JSExpression",
+                        "value": "$results.calculatedAge"
+                    }
+                }
+            ]
+        },
+        "FlowBranchInstruction": {
+            "type": "object",
+            "description": "条件分支指令",
+            "required": [
+                "type",
+                "params"
+            ],
+            "properties": {
+                "type": {
+                    "const": "flow.branch"
+                },
+                "condition": {
+                    "$ref": "#/definitions/JSExpression",
+                    "description": "前置守卫条件(可选),用于决定是否执行整个分支指令"
+                },
+                "params": {
+                    "type": "object",
+                    "required": [
+                        "expression",
+                        "trueFlow"
+                    ],
+                    "properties": {
+                        "expression": {
+                            "$ref": "#/definitions/JSExpression",
+                            "description": "分支判断表达式(核心业务逻辑)"
+                        },
+                        "trueFlow": {
+                            "type": "array",
+                            "description": "表达式为真时执行的指令列表",
+                            "items": {
+                                "$ref": "#/definitions/Instruction"
+                            }
+                        },
+                        "falseFlow": {
+                            "type": "array",
+                            "description": "表达式为假时执行的指令列表(可选)",
+                            "items": {
+                                "$ref": "#/definitions/Instruction"
+                            }
+                        }
+                    }
+                }
+            },
+            "examples": [
+                {
+                    "type": "flow.branch",
+                    "params": {
+                        "expression": {
+                            "type": "JSExpression",
+                            "value": "$results.age >= 18"
+                        },
+                        "trueFlow": [
+                            {
+                                "type": "ui.toast",
+                                "params": {
+                                    "type": "success",
+                                    "message": "成年用户"
+                                }
+                            }
+                        ],
+                        "falseFlow": [
+                            {
+                                "type": "ui.toast",
+                                "params": {
+                                    "type": "warning",
+                                    "message": "未成年用户"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "FlowScriptInstruction": {
+            "type": "object",
+            "description": "自定义脚本指令,支持内部编排其他指令",
+            "required": [
+                "type",
+                "params"
+            ],
+            "properties": {
+                "type": {
+                    "const": "flow.script"
+                },
+                "params": {
+                    "$ref": "#/definitions/JSFunction",
+                    "description": "JavaScript 函数,可使用 context.$execute 编排指令"
+                },
+                "resultKey": {
+                    "type": "string",
+                    "description": "结果存储键"
+                }
+            },
+            "examples": [
+                {
+                    "type": "flow.script",
+                    "params": {
+                        "type": "JSFunction",
+                        "value": "async function(context) {\n  const { $execute, $event } = context;\n  const price = $event.newValue;\n  \n  const quantity = await $execute.instruction({\n    type: 'component.getValue',\n    target: 'quantity'\n  });\n  \n  const total = parseFloat(price) * parseFloat(quantity);\n  \n  await $execute.instruction({\n    type: 'component.setValue',\n    target: 'total',\n    params: total.toFixed(2)\n  });\n  \n  return { success: true, total };\n}"
+                    },
+                    "resultKey": "calcResult"
+                }
+            ]
+        },
+        "UiToastInstruction": {
+            "type": "object",
+            "description": "Toast 通知指令",
+            "required": [
+                "type",
+                "params"
+            ],
+            "properties": {
+                "type": {
+                    "const": "ui.toast"
+                },
+                "params": {
+                    "type": "object",
+                    "required": [
+                        "message"
+                    ],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "enum": [
+                                "success",
+                                "error",
+                                "info",
+                                "warning",
+                                "message",
+                                "loading"
+                            ],
+                            "description": "Toast 类型",
+                            "default": "message"
+                        },
+                        "message": {
+                            "type": "string",
+                            "description": "主要消息内容"
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "详细描述(可选)"
+                        },
+                        "duration": {
+                            "type": "number",
+                            "description": "显示时长(毫秒),默认 3000"
+                        }
+                    }
+                }
+            },
+            "examples": [
+                {
+                    "type": "ui.toast",
+                    "params": {
+                        "type": "success",
+                        "message": "操作成功",
+                        "description": "数据已保存",
+                        "duration": 3000
+                    }
+                }
+            ]
+        },
+        "UiModalOpenInstruction": {
+            "type": "object",
+            "description": "打开模态框指令",
+            "required": [
+                "type",
+                "params"
+            ],
+            "properties": {
+                "type": {
+                    "const": "ui.modal.open"
+                },
+                "params": {
+                    "type": "object",
+                    "properties": {
+                        "pageId": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "模式1: 页面ID,null 表示使用默认表单页"
+                        },
+                        "mode": {
+                            "type": "string",
+                            "enum": [
+                                "create",
+                                "edit"
+                            ],
+                            "description": "模式1: 模式(新增或编辑)"
+                        },
+                        "data": {
+                            "type": "object",
+                            "description": "模式1: 传递给模态框的数据"
+                        },
+                        "url": {
+                            "type": "string",
+                            "description": "模式2: 网页地址,打开 iframe 网页"
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "通用: 模态框标题"
+                        },
+                        "width": {
+                            "type": [
+                                "string",
+                                "number"
+                            ],
+                            "description": "通用: 宽度,如 '80%' 或 800"
+                        },
+                        "height": {
+                            "type": [
+                                "string",
+                                "number"
+                            ],
+                            "description": "通用: 高度,如 '90%' 或 600"
+                        }
+                    }
+                }
+            },
+            "examples": [
+                {
+                    "type": "ui.modal.open",
+                    "params": {
+                        "pageId": null,
+                        "mode": "create"
+                    }
+                },
+                {
+                    "type": "ui.modal.open",
+                    "params": {
+                        "pageId": "form_edit",
+                        "mode": "edit",
+                        "data": {
+                            "id": "123"
+                        }
+                    }
+                },
+                {
+                    "type": "ui.modal.open",
+                    "params": {
+                        "url": "https://example.com",
+                        "title": "外部页面",
+                        "width": "80%",
+                        "height": "90%"
+                    }
+                }
+            ]
+        },
+        "UiModalCloseInstruction": {
+            "type": "object",
+            "description": "关闭模态框指令",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "const": "ui.modal.close"
+                },
+                "params": {
+                    "type": "object",
+                    "properties": {
+                        "reason": {
+                            "type": "string",
+                            "description": "关闭原因"
+                        }
+                    }
+                }
+            },
+            "examples": [
+                {
+                    "type": "ui.modal.close"
+                }
+            ]
+        },
+        "SysSdkInvokeInstruction": {
+            "type": "object",
+            "description": "调用 SDK 方法指令",
+            "required": [
+                "type",
+                "params"
+            ],
+            "properties": {
+                "type": {
+                    "const": "sys.sdk.invoke"
+                },
+                "params": {
+                    "type": "object",
+                    "required": [
+                        "method"
+                    ],
+                    "properties": {
+                        "method": {
+                            "type": "string",
+                            "description": "SDK 方法路径,如 'api.callPanelButton'"
+                        },
+                        "arguments": {
+                            "type": "array",
+                            "description": "方法参数数组"
+                        }
+                    }
+                },
+                "resultKey": {
+                    "type": "string",
+                    "description": "结果存储键"
+                }
+            },
+            "examples": [
+                {
+                    "type": "sys.sdk.invoke",
+                    "params": {
+                        "method": "api.callPanelButton",
+                        "arguments": [
+                            "保存",
+                            {
+                                "name": "张三"
+                            },
+                            "panel_001"
+                        ]
+                    },
+                    "resultKey": "saveResult"
+                }
+            ]
+        },
+        "JSExpression": {
+            "type": "object",
+            "description": "JavaScript 表达式对象",
+            "required": [
+                "type",
+                "value"
+            ],
+            "properties": {
+                "type": {
+                    "const": "JSExpression"
+                },
+                "value": {
+                    "type": "string",
+                    "description": "JavaScript 表达式字符串,可访问上下文变量"
+                }
+            },
+            "examples": [
+                {
+                    "type": "JSExpression",
+                    "value": "$results.age >= 18"
+                },
+                {
+                    "type": "JSExpression",
+                    "value": "$self.value !== ''"
+                }
+            ]
+        },
+        "JSFunction": {
+            "type": "object",
+            "description": "JavaScript 函数对象",
+            "required": [
+                "type",
+                "value"
+            ],
+            "properties": {
+                "type": {
+                    "const": "JSFunction"
+                },
+                "value": {
+                    "type": "string",
+                    "description": "JavaScript 函数,格式: async function(context) { ... }"
+                }
+            },
+            "examples": [
+                {
+                    "type": "JSFunction",
+                    "value": "async function(context) {\n  const { $execute, $event } = context;\n  // 可以使用 $execute.instruction() 编排其他指令\n  return { success: true };\n}"
+                }
+            ]
+        }
+    },
+    "componentActions": {
+        "description": "可通过 component.invoke 调用的组件动作",
+        "FormComponent": {
+            "description": "表单组件动作",
+            "actions": [
+                {
+                    "name": "updateFields",
+                    "displayName": "更新字段",
+                    "description": "批量更新表单字段值",
+                    "parameters": [
+                        {
+                            "name": "updates",
+                            "type": "array",
+                            "required": true,
+                            "description": "字段更新数组,格式: [{ field: string, value: any }]",
+                            "schema": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "required": [
+                                        "field",
+                                        "value"
+                                    ],
+                                    "properties": {
+                                        "field": {
+                                            "type": "string"
+                                        },
+                                        "value": {
+                                            "description": "任意类型"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "form_1",
+                        "action": "updateFields",
+                        "params": {
+                            "updates": [
+                                {
+                                    "field": "name",
+                                    "value": "张三"
+                                },
+                                {
+                                    "field": "leaveType",
+                                    "value": "annual"
+                                }
+                            ]
+                        }
+                    },
+                    "notes": [
+                        "下拉框字段必须使用 value(如 'annual'),不能使用 label",
+                        "多选字段必须使用数组格式",
+                        "推荐一次性更新多个字段"
+                    ]
+                },
+                {
+                    "name": "validate",
+                    "displayName": "校验表单",
+                    "description": "校验表单数据有效性",
+                    "parameters": [],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "form_1",
+                        "action": "validate"
+                    }
+                },
+                {
+                    "name": "clickButton_{buttonName}",
+                    "displayName": "点击按钮",
+                    "description": "点击表单底部按钮",
+                    "parameters": [],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "form_1",
+                        "action": "clickButton_保存"
+                    }
+                }
+            ]
+        },
+        "TableComponent": {
+            "description": "表格组件动作",
+            "actions": [
+                {
+                    "name": "refresh",
+                    "displayName": "刷新",
+                    "description": "重新加载表格数据",
+                    "parameters": [],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "table_1",
+                        "action": "refresh"
+                    }
+                },
+                {
+                    "name": "create",
+                    "displayName": "新增",
+                    "description": "打开新增表单",
+                    "parameters": [],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "table_1",
+                        "action": "create"
+                    }
+                },
+                {
+                    "name": "edit",
+                    "displayName": "编辑",
+                    "description": "通过记录编号编辑指定行",
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "type": "string",
+                            "required": true,
+                            "description": "记录编号"
+                        }
+                    ],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "table_1",
+                        "action": "edit",
+                        "params": {
+                            "id": "REC001"
+                        }
+                    }
+                },
+                {
+                    "name": "delete",
+                    "displayName": "删除",
+                    "description": "批量删除指定行",
+                    "parameters": [
+                        {
+                            "name": "ids",
+                            "type": "array",
+                            "required": true,
+                            "description": "行数据的编号字段值列表"
+                        }
+                    ],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "table_1",
+                        "action": "delete",
+                        "params": {
+                            "ids": [
+                                "123",
+                                "456"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "getSelectedItems",
+                    "displayName": "获取勾选项",
+                    "description": "获取当前勾选的所有项数据",
+                    "parameters": [],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "table_1",
+                        "action": "getSelectedItems",
+                        "resultKey": "selectedData"
+                    }
+                },
+                {
+                    "name": "setSelectedItems",
+                    "displayName": "设置勾选项",
+                    "description": "程序化设置勾选状态",
+                    "parameters": [
+                        {
+                            "name": "ids",
+                            "type": "array",
+                            "required": true,
+                            "description": "要勾选的项编号列表"
+                        }
+                    ],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "table_1",
+                        "action": "setSelectedItems",
+                        "params": {
+                            "ids": [
+                                "123",
+                                "456"
+                            ]
+                        }
+                    },
+                    "notes": [
+                        "会完全替换当前勾选状态,而不是追加"
+                    ]
+                },
+                {
+                    "name": "deleteSelectedItems",
+                    "displayName": "删除勾选项",
+                    "description": "删除当前勾选的所有项",
+                    "parameters": [],
+                    "example": {
+                        "type": "component.invoke",
+                        "target": "table_1",
+                        "action": "deleteSelectedItems"
+                    },
+                    "notes": [
+                        "要求至少勾选一行",
+                        "删除成功后自动清空勾选状态"
+                    ]
+                }
+            ]
+        }
+    },
+    "contextVariables": {
+        "description": "在 JSExpression 和 JSFunction 中可访问的上下文变量",
+        "$self": {
+            "type": "object",
+            "description": "当前组件信息",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "value": {
+                    "description": "组件当前值"
+                },
+                "props": {
+                    "type": "object"
+                }
+            }
+        },
+        "$event": {
+            "description": "事件参数(基于 EngineEventProtocol)",
+            "examples": {
+                "valueChange": {
+                    "newValue": "any",
+                    "oldValue": "any"
+                },
+                "itemClick": {
+                    "index": "number",
+                    "item": "Record<string, any>"
+                },
+                "itemDoubleClick": {
+                    "index": "number",
+                    "item": "Record<string, any>"
+                },
+                "itemRightClick": {
+                    "index": "number",
+                    "item": "Record<string, any>"
+                },
+                "itemLongPress": {
+                    "index": "number",
+                    "item": "Record<string, any>"
+                },
+                "mount/unmount/click/focus/blur": "void"
+            }
+        },
+        "$prev": {
+            "description": "上一个指令的执行结果"
+        },
+        "$results": {
+            "type": "object",
+            "description": "所有指令的结果集合,通过 resultKey 访问"
+        },
+        "$execute": {
+            "type": "object",
+            "description": "指令执行器(仅在 flow.script 中可用)",
+            "methods": {
+                "instruction": "执行单个指令: await $execute.instruction({ type: '...', ... })",
+                "instructionSet": "执行指令集: await $execute.instructionSet({ instructions: [...] })",
+                "batch": "批量执行: await $execute.batch([...])"
+            }
+        },
+        "$panelMeta": {
+            "type": "object",
+            "description": "Panel 元数据,包含当前面板的基本信息",
+            "properties": {
+                "panelCode": {
+                    "type": "string",
+                    "description": "面板编码"
+                },
+                "panelName": {
+                    "type": "string",
+                    "description": "面板名称"
+                },
+                "panelCategory": {
+                    "type": "string",
+                    "description": "面板分类(可选)"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "面板描述(可选)"
+                },
+                "version": {
+                    "type": "string",
+                    "description": "面板版本(可选)"
+                }
+            },
+            "examples": {
+                "访问面板编码": "$panelMeta.panelCode",
+                "访问面板名称": "$panelMeta.panelName",
+                "访问面板分类": "$panelMeta.panelCategory"
+            }
+        },
+        "$scope": {
+            "type": "object",
+            "description": "作用域上下文,用于访问当前 DataScope 注入的数据(如表格行、列表项)",
+            "properties": {
+                "record": {
+                    "description": "数据实体(当前行或列表项的完整数据)"
+                },
+                "index": {
+                    "type": "number",
+                    "description": "索引(可选)"
+                }
+            },
+            "examples": {
+                "访问表格行数据": "$scope.record.name",
+                "访问列表项索引": "$scope.index"
+            }
+        },
+        "$user": {
+            "type": "object",
+            "description": "全局用户信息,从 SDK getCurrentUser() 获取",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "用户ID"
+                },
+                "fullName": {
+                    "type": "string",
+                    "description": "用户全名(已归一化)"
+                },
+                "role": {
+                    "type": "string",
+                    "description": "用户角色"
+                },
+                "phone": {
+                    "type": "string",
+                    "description": "手机号"
+                },
+                "raw": {
+                    "description": "原始用户数据(保留以备不时之需)"
+                }
+            },
+            "examples": {
+                "访问用户ID": "$user.id",
+                "访问用户名": "$user.fullName",
+                "访问用户角色": "$user.role"
+            }
+        },
+        "$meta": {
+            "type": "object",
+            "description": "元数据",
+            "properties": {
+                "timestamp": {
+                    "type": "number"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "traceId": {
+                    "type": "string"
+                },
+                "executionDepth": {
+                    "type": "number"
+                }
+            }
+        }
+    },
+    "examples": {
+        "表单提交前验证": {
+            "type": "click",
+            "instructions": [
+                {
+                    "type": "component.getValue",
+                    "target": "input_name",
+                    "resultKey": "userName"
+                },
+                {
+                    "type": "flow.branch",
+                    "params": {
+                        "expression": {
+                            "type": "JSExpression",
+                            "value": "$results.userName === ''"
+                        },
+                        "trueFlow": [
+                            {
+                                "type": "ui.toast",
+                                "params": {
+                                    "type": "error",
+                                    "message": "请填写姓名"
+                                }
+                            }
+                        ],
+                        "falseFlow": [
+                            {
+                                "type": "component.invoke",
+                                "target": "form_1",
+                                "action": "clickButton_保存"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "使用 flow.script 计算总价": {
+            "type": "valueChange",
+            "debounce": 300,
+            "instructions": [
+                {
+                    "type": "flow.script",
+                    "params": {
+                        "type": "JSFunction",
+                        "value": "async function(context) {\n  const { $execute, $event } = context;\n  const price = $event.newValue;\n  \n  if (!price) return { success: false };\n  \n  const qty = await $execute.instruction({\n    type: 'component.getValue',\n    target: 'quantity'\n  });\n  \n  const total = parseFloat(price) * parseFloat(qty);\n  \n  await $execute.instruction({\n    type: 'component.setValue',\n    target: 'total',\n    params: total.toFixed(2)\n  });\n  \n  return { success: true, total };\n}"
+                    }
+                }
+            ]
+        },
+        "批量操作勾选行": {
+            "type": "click",
+            "instructions": [
+                {
+                    "type": "component.invoke",
+                    "target": "table_1",
+                    "action": "getSelectedItems",
+                    "resultKey": "selected"
+                },
+                {
+                    "type": "flow.branch",
+                    "params": {
+                        "expression": {
+                            "type": "JSExpression",
+                            "value": "$results.selected.selectedCount > 0"
+                        },
+                        "trueFlow": [
+                            {
+                                "type": "component.invoke",
+                                "target": "table_1",
+                                "action": "deleteSelectedItems"
+                            }
+                        ],
+                        "falseFlow": [
+                            {
+                                "type": "ui.toast",
+                                "params": {
+                                    "type": "warning",
+                                    "message": "请先勾选要删除的行"
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,1247 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WxMiniApi",
+  "type": "object",
+  "description": "微信小程序高层调用接口列表",
+  "methods": [
+    {
+      "name": "getUserProfile",
+      "description": "通过微信小程序接口, 获取用户信息（昵称/头像等）",
+      "param": {
+        "name": "opts",
+        "type": "GetUserProfileOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "message",
+            "type": "string",
+            "optional": false,
+            "description": "显示在确认授权对话框里的文字信息"
+          },
+          {
+            "name": "buttonLabel",
+            "type": "string",
+            "optional": false,
+            "description": "显示在确认对话框里的按钮标签"
+          },
+          {
+            "name": "type",
+            "type": "UserProfileQueryType",
+            "optional": true,
+            "description": "获取信息的类型"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "UserProfileDto",
+        "properties": [
+          {
+            "name": "nickName",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "gender",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "language",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "city",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "province",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "country",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "avatarUrl",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "is_demote",
+            "type": "boolean",
+            "optional": true,
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "getPhoneNum",
+      "description": "通过微信小程序接口，获取用户手机号码",
+      "param": {
+        "name": "opts",
+        "type": "GetPhoneNumOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "message",
+            "type": "string",
+            "optional": false,
+            "description": "显示在确认授权对话框里的文字信息"
+          },
+          {
+            "name": "buttonLabel",
+            "type": "string",
+            "optional": false,
+            "description": "确认按钮标签"
+          },
+          {
+            "name": "rejectButtonLabel",
+            "type": "string",
+            "optional": true,
+            "description": "拒绝按钮标签"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "PhoneNumDto",
+        "properties": [
+          {
+            "name": "encryptedData",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "code",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "iv",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "appId",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "makePhoneCall",
+      "description": "拨打电话",
+      "param": {
+        "name": "opts",
+        "type": "MakePhoneCallOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "phoneNum",
+            "type": "string",
+            "optional": false,
+            "description": "电话号码"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "chooseMedia",
+      "description": "调起相机并选取照片/视频",
+      "param": {
+        "name": "opts",
+        "type": "ChooseMediaOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "count",
+            "type": "number",
+            "optional": true,
+            "description": "最多选取数量，默认 2"
+          },
+          {
+            "name": "mediaTypes",
+            "type": "string[]",
+            "optional": true,
+            "description": "媒体类型，如 ['image', 'video', 'mix']，默认 ['mix']"
+          },
+          {
+            "name": "sourceTypes",
+            "type": "string[]",
+            "optional": true,
+            "description": "来源类型，如 ['album', 'camera']，默认 ['album', 'camera']"
+          },
+          {
+            "name": "maxDuration",
+            "type": "number",
+            "optional": true,
+            "description": "最大时长（秒），默认 30"
+          },
+          {
+            "name": "sizeTypes",
+            "type": "string[]",
+            "optional": true,
+            "description": "尺寸类型，如 ['original', 'compressed']，默认 ['compressed', 'original']"
+          },
+          {
+            "name": "camera",
+            "type": "string",
+            "optional": true,
+            "description": "摄像头方向 'back' | 'front'，默认 'back'"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "WxLocalFile[]",
+        "properties": [
+          {
+            "name": "tempFilePath",
+            "type": "string",
+            "optional": true,
+            "description": "本地临时文件路径"
+          },
+          {
+            "name": "size",
+            "type": "number",
+            "optional": true,
+            "description": "文件大小"
+          },
+          {
+            "name": "fileType",
+            "type": "string",
+            "optional": true,
+            "description": "文件类型"
+          },
+          {
+            "name": "duration",
+            "type": "number",
+            "optional": true,
+            "description": "视频时长（秒），视频时有效"
+          },
+          {
+            "name": "thumbTempFilePath",
+            "type": "string",
+            "optional": true,
+            "description": "视频缩略图"
+          },
+          {
+            "name": "width",
+            "type": "number",
+            "optional": true,
+            "description": "宽度，媒体文件有效"
+          },
+          {
+            "name": "height",
+            "type": "number",
+            "optional": true,
+            "description": "高度，媒体文件有效"
+          }
+        ]
+      }
+    },
+    {
+      "name": "scanCode",
+      "description": "扫描二维码，返回二维码内容",
+      "param": {
+        "name": "opts",
+        "type": "BaseOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "ScanCodeDto",
+        "properties": [
+          {
+            "name": "result",
+            "type": "string",
+            "optional": true,
+            "description": "所扫码的内容"
+          },
+          {
+            "name": "scanType",
+            "type": "string",
+            "optional": true,
+            "description": "所扫码的类型"
+          },
+          {
+            "name": "charSet",
+            "type": "string",
+            "optional": true,
+            "description": "所扫码的字符集"
+          },
+          {
+            "name": "path",
+            "type": "string",
+            "optional": true,
+            "description": "当所扫的码为当前小程序二维码时，会返回此字段，内容为二维码携带的 path"
+          },
+          {
+            "name": "rawData",
+            "type": "string",
+            "optional": true,
+            "description": "原始数据，base64编码"
+          }
+        ]
+      }
+    },
+    {
+      "name": "readLocalFile",
+      "description": "读取本地文件内容",
+      "param": {
+        "name": "opts",
+        "type": "ReadLocalFileOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "filePath",
+            "type": "string",
+            "optional": false,
+            "description": "文件路径"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "ReadLocalFileDto",
+        "properties": [
+          {
+            "name": "data",
+            "type": "string | ArrayBuffer",
+            "optional": true,
+            "description": "文件内容"
+          }
+        ]
+      }
+    },
+    {
+      "name": "downloadFile",
+      "description": "下载文件，返回临时文件路径",
+      "param": {
+        "name": "opts",
+        "type": "DownloadFileOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "url",
+            "type": "string",
+            "optional": false,
+            "description": "文件 URL"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "string",
+        "properties": []
+      }
+    },
+    {
+      "name": "uploadFile",
+      "description": "上传文件到服务器",
+      "param": {
+        "name": "opts",
+        "type": "UploadFileOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "url",
+            "type": "string",
+            "optional": false,
+            "description": "上传目标服务器地址"
+          },
+          {
+            "name": "filePath",
+            "type": "string",
+            "optional": false,
+            "description": "本地临时文件路径"
+          },
+          {
+            "name": "fileName",
+            "type": "string",
+            "optional": false,
+            "description": "上传的目标文件名"
+          },
+          {
+            "name": "formData",
+            "type": "Record<string, string>",
+            "optional": true,
+            "description": "其它表单参数（如用户/授权等）"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "string",
+        "properties": []
+      }
+    },
+    {
+      "name": "openDocument",
+      "description": "打开预览文档（支持 txt/pdf/excel/word/ppt 等格式）",
+      "param": {
+        "name": "opts",
+        "type": "OpenDocumentOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "filePath",
+            "type": "string",
+            "optional": false,
+            "description": "临时文件路径"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "saveImageToPhotosAlbum",
+      "description": "保存图片到相册",
+      "param": {
+        "name": "opts",
+        "type": "SaveToAlbumOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "filePath",
+            "type": "string",
+            "optional": false,
+            "description": "文件路径"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "saveVideoToPhotosAlbum",
+      "description": "保存视频到相册",
+      "param": {
+        "name": "opts",
+        "type": "SaveToAlbumOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "filePath",
+            "type": "string",
+            "optional": false,
+            "description": "文件路径"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "shareFileMessage",
+      "description": "分享文件消息（将临时文件分享给他人）",
+      "param": {
+        "name": "opts",
+        "type": "ShareFileMessageOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "filePath",
+            "type": "string",
+            "optional": false,
+            "description": "要分享的临时文件路径"
+          },
+          {
+            "name": "fileName",
+            "type": "string",
+            "optional": false,
+            "description": "显示在聊天界面的文件名（注意扩展名要正确）"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "chooseMessageFile",
+      "description": "从聊天记录中选择文件",
+      "param": {
+        "name": "opts",
+        "type": "ChooseMessageFileOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "count",
+            "type": "number",
+            "optional": false,
+            "description": "最多可以选择的文件个数（0~100）"
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "optional": true,
+            "description": "文件类型：'all' | 'video' | 'image' | 'file'，默认 'all'"
+          },
+          {
+            "name": "extensions",
+            "type": "string[]",
+            "optional": true,
+            "description": "文件扩展名过滤（仅 type=file 时有效）"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "WxLocalFile[]",
+        "properties": [
+          {
+            "name": "tempFilePath",
+            "type": "string",
+            "optional": true,
+            "description": "本地临时文件路径"
+          },
+          {
+            "name": "size",
+            "type": "number",
+            "optional": true,
+            "description": "文件大小"
+          },
+          {
+            "name": "fileType",
+            "type": "string",
+            "optional": true,
+            "description": "文件类型"
+          },
+          {
+            "name": "duration",
+            "type": "number",
+            "optional": true,
+            "description": "视频时长（秒），视频时有效"
+          },
+          {
+            "name": "thumbTempFilePath",
+            "type": "string",
+            "optional": true,
+            "description": "视频缩略图"
+          },
+          {
+            "name": "width",
+            "type": "number",
+            "optional": true,
+            "description": "宽度，媒体文件有效"
+          },
+          {
+            "name": "height",
+            "type": "number",
+            "optional": true,
+            "description": "高度，媒体文件有效"
+          }
+        ]
+      }
+    },
+    {
+      "name": "navigateTo",
+      "description": "跳转到小程序内部页面",
+      "param": {
+        "name": "opts",
+        "type": "NavigateToOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "path",
+            "type": "string",
+            "optional": false,
+            "description": "页面路径（如 '/pages/index/index'）"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "redirectTo",
+      "description": "关闭当前页面后跳转",
+      "param": {
+        "name": "opts",
+        "type": "RedirectToOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "path",
+            "type": "string",
+            "optional": false,
+            "description": "页面路径"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "reLaunch",
+      "description": "关闭所有页面，打开应用内某页面（清空页面栈）",
+      "param": {
+        "name": "opts",
+        "type": "ReLaunchOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "path",
+            "type": "string",
+            "optional": false,
+            "description": "页面路径"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "navigateBack",
+      "description": "关闭当前页面，返回上一页面或多级页面",
+      "param": {
+        "name": "opts",
+        "type": "NavigateBackOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "delta",
+            "type": "number",
+            "optional": true,
+            "description": "返回的页面数，默认 1"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "loginGetCode",
+      "description": "调用微信登录，返回登录码 code",
+      "param": {
+        "name": "opts",
+        "type": "BaseOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "string",
+        "properties": []
+      }
+    },
+    {
+      "name": "getLocation",
+      "description": "获取当前位置（经纬度）",
+      "param": {
+        "name": "opts",
+        "type": "GetLocationOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "openIt",
+            "type": "boolean",
+            "optional": true,
+            "description": "获取后是否打开地图，默认 false"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "GpsLocationDto",
+        "properties": [
+          {
+            "name": "latitude",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "longitude",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "altitude",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "horizontalAccuracy",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "verticalAccuracy",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "speed",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "address",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "openLocation",
+      "description": "打开地图并定位到指定位置",
+      "param": {
+        "name": "opts",
+        "type": "OpenLocationOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "location",
+            "type": "GpsLocationDto",
+            "optional": false,
+            "description": "位置坐标",
+            "properties": [
+              {
+                "name": "latitude",
+                "type": "number",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "longitude",
+                "type": "number",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "altitude",
+                "type": "number",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "horizontalAccuracy",
+                "type": "number",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "verticalAccuracy",
+                "type": "number",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "speed",
+                "type": "number",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "address",
+                "type": "string",
+                "optional": true,
+                "description": ""
+              }
+            ]
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "chooseLocation",
+      "description": "打开地图让用户选择位置，返回所选位置坐标",
+      "param": {
+        "name": "opts",
+        "type": "ChooseLocationOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "initLocation",
+            "type": "GpsLocationDto",
+            "optional": true,
+            "description": "初始定位（可选）"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "GpsLocationDto",
+        "properties": [
+          {
+            "name": "latitude",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "longitude",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "altitude",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "horizontalAccuracy",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "verticalAccuracy",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "speed",
+            "type": "number",
+            "optional": true,
+            "description": ""
+          },
+          {
+            "name": "address",
+            "type": "string",
+            "optional": true,
+            "description": ""
+          }
+        ]
+      }
+    },
+    {
+      "name": "setSharePageMessage",
+      "description": "设置分享页信息（用于分享转发，全局一份）",
+      "param": {
+        "name": "opts",
+        "type": "SetSharePageMessageOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "sharePage",
+            "type": "WxSharePageInfo",
+            "optional": false,
+            "description": "分享页信息",
+            "properties": [
+              {
+                "name": "title",
+                "type": "string",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "path",
+                "type": "string",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "imageUrl",
+                "type": "string",
+                "optional": true,
+                "description": ""
+              },
+              {
+                "name": "desc",
+                "type": "string",
+                "optional": true,
+                "description": ""
+              }
+            ]
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "showShareImageMenu",
+      "description": "显示图片分享菜单",
+      "param": {
+        "name": "opts",
+        "type": "ShowShareImageMenuOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "path",
+            "type": "string",
+            "optional": false,
+            "description": "图片路径"
+          },
+          {
+            "name": "style",
+            "type": "string",
+            "optional": false,
+            "description": "样式"
+          },
+          {
+            "name": "needShowEntrance",
+            "type": "string",
+            "optional": false,
+            "description": "是否需要显示入口"
+          },
+          {
+            "name": "entrancePath",
+            "type": "string",
+            "optional": false,
+            "description": "入口路径"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "getClipboardData",
+      "description": "读取剪贴板内容",
+      "param": {
+        "name": "opts",
+        "type": "BaseOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "string",
+        "properties": []
+      }
+    },
+    {
+      "name": "setClipboardData",
+      "description": "写入剪贴板",
+      "param": {
+        "name": "opts",
+        "type": "SetClipboardDataOptions",
+        "required": true,
+        "properties": [
+          {
+            "name": "data",
+            "type": "string",
+            "optional": false,
+            "description": "剪贴板内容"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "startAudioRecord",
+      "description": "开始录音",
+      "param": {
+        "name": "opts",
+        "type": "StartAudioRecordOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "duration",
+            "type": "number",
+            "optional": true,
+            "description": "录音时长（毫秒）"
+          },
+          {
+            "name": "sampleRate",
+            "type": "number",
+            "optional": true,
+            "description": "采样率"
+          },
+          {
+            "name": "numberOfChannels",
+            "type": "number",
+            "optional": true,
+            "description": "通道数"
+          },
+          {
+            "name": "encodeBitRate",
+            "type": "number",
+            "optional": true,
+            "description": "编码码率"
+          },
+          {
+            "name": "format",
+            "type": "string",
+            "optional": true,
+            "description": "音频格式"
+          },
+          {
+            "name": "frameSize",
+            "type": "number",
+            "optional": true,
+            "description": "帧大小"
+          },
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "stopAudioRecord",
+      "description": "停止录音，返回录音文件临时路径",
+      "param": {
+        "name": "opts",
+        "type": "BaseOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "string",
+        "properties": []
+      }
+    },
+    {
+      "name": "pauseAudioRecord",
+      "description": "暂停录音",
+      "param": {
+        "name": "opts",
+        "type": "BaseOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    },
+    {
+      "name": "resumeAudioRecord",
+      "description": "继续录音",
+      "param": {
+        "name": "opts",
+        "type": "BaseOptions",
+        "required": false,
+        "properties": [
+          {
+            "name": "timeout",
+            "type": "number",
+            "optional": true,
+            "description": "超时时间（毫秒），默认 60000ms"
+          }
+        ]
+      },
+      "returns": {
+        "type": "void",
+        "properties": []
+      }
+    }
+  ]
+}
