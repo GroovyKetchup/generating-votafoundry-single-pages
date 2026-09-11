@@ -1,6 +1,6 @@
 ---
 name: generating-votafoundry-single-pages
-description: Use when generating a single HTML page for VotaFoundry / SemFoundry「个性交付」delivery — data dashboards or generic pages via PanelX-SDK real data, or custom shells/menus/entries via CDP-SDK (主题订阅、动作注册). Triggers: HTML 单页、数据看板、通用页、自定义外壳、PanelX-SDK、CDP-SDK。
+description: "Use when generating a single HTML page for VotaFoundry / SemFoundry「个性交付」delivery — data dashboards or generic pages via PanelX-SDK real data, or custom shells/menus/entries via CDP-SDK (主题订阅、动作注册). Triggers: HTML 单页、数据看板、通用页、自定义外壳、PanelX-SDK、CDP-SDK。"
 ---
 
 # 生成 VotaFoundry 个性交付单页

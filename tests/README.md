@@ -15,6 +15,7 @@ powershell -ExecutionPolicy Bypass -File tests\run-validation.ps1
 - `SKILL.md` + `references/` 存在
 - 交付目录里**无** `test-pressure*`（确保不会带出测试）
 - frontmatter：`name` 符合 `^[a-z][a-z0-9]*(-[a-z0-9]+)*$`；`description` 存在、≤1024 字符、含 "Use when" 触发
+- frontmatter 必须是**合法 YAML**：未加引号的标量值里出现 `: ` 或 ` #` 即 FAIL（规范解析器会当作 mapping/注释，导致 CLI/IDE 加载技能失败）
 - `SKILL.md` 中所有相对链接可解析
 - 未泄漏平台绝对路径（`/data/scene/`、`/knowledge/`、`/compose`）
 - 示例里无 `@latest` / `unpkg.com` 直引

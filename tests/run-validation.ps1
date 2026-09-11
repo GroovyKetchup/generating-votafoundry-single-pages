@@ -1,6 +1,6 @@
 ﻿# Tier 1: deterministic skill validation (no agent needed). Run from anywhere.
 #   powershell -ExecutionPolicy Bypass -File tests\run-validation.ps1
-# Gates: structure, deliverable cleanliness, frontmatter, relative links, no leaked platform paths, scene mirror sync.
+# Gates: structure, deliverable cleanliness, frontmatter (+ YAML scalar integrity), relative links, no leaked platform paths, scene mirror sync.
 # Exit code 0 = PASS, 1 = FAIL.
 
 $ErrorActionPreference = 'Stop'
@@ -47,11 +47,37 @@ else {
   if (-not $descM.Success) { Fail 'frontmatter missing description' }
   else {
     $desc = $descM.Groups[1].Value
+    # 去掉 YAML 引号后再度量/匹配关键词
+    if ($desc -match '^"(?<v>.*)"$') { $desc = $Matches['v'] }
+    elseif ($desc -match "^'(?<v>.*)'$") { $desc = $Matches['v'] }
     if ([string]::IsNullOrWhiteSpace($desc)) { Fail 'description is empty' }
     elseif ($desc.Length -gt 1024) { Fail "description too long ($($desc.Length) chars > 1024)" }
     elseif ($desc -notmatch '(?i)use when') { Warn "description does not contain 'Use when' trigger" }
     else { Ok "description length $($desc.Length) + has trigger" }
   }
+
+  # 3b. YAML 标量完整性：未加引号的 plain scalar 里出现 ": " / " #" 会让规范 YAML
+  #     解析器报 "mapping values are not allowed here"（CLI/IDE 加载技能失败）。
+  $yamlIssues = @()
+  $inBlock = $false
+  $fmLines = $fmBody -split "\r?\n"
+  for ($i = 0; $i -lt $fmLines.Count; $i++) {
+    $ln = $fmLines[$i]
+    if ($inBlock) { if ($ln -match '^\s') { continue } else { $inBlock = $false } }
+    if ($ln -match '^\s*#') { continue }
+    $kv = [regex]::Match($ln, '^\s*[A-Za-z0-9_.\-]+\s*:(?<rest>.*)$')
+    if (-not $kv.Success) { continue }
+    $val = $kv.Groups['rest'].Value.Trim()
+    if ($val -eq '') { continue }                      # 空值 / 嵌套 map
+    if ($val -match '^[|>]') { $inBlock = $true; continue }   # 块标量
+    if ($val -match '^["'']') { continue }             # 已加引号
+    $lineNo = $i + 2
+    if ($val -match ': ') { $yamlIssues += "第 $lineNo 行: 未加引号的值含 ': '（应给整个 value 加引号）" }
+    if ($val -match '\s#') { $yamlIssues += "第 $lineNo 行: 未加引号的值含 ' #'（会被当作注释截断）" }
+  }
+  if ($yamlIssues.Count -gt 0) {
+    Fail ("frontmatter YAML 非法易错，请修正:`n      - " + ($yamlIssues -join "`n      - "))
+  } else { Ok 'frontmatter scalars ok (no unquoted ": " / " #")' }
 }
 
 # 4. relative links in SKILL.md body resolve
