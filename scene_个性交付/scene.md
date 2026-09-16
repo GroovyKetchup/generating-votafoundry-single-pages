@@ -21,7 +21,10 @@
 | `/knowledge/cdp-events-commands.md` | CDP 指令文档（人类可读） | 需要调用 CDP 指令时，按该文档选择指令类型与参数。 |
 | `/knowledge/cdp-events-commands.json` | CDP 指令文档（结构化 JSON） | 需要程序化查阅指令时使用。 |
 | `/knowledge/examples/*.html` | CDP-SDK 示例（step by step） | 注册动作、主题同步、表单提交等流程参考。 |
-| `/script` | 目前为空，可在需要时放置辅助脚本 | 暂无可执行脚本。 |
+| `/knowledge/internal-resources.md` | 业务资源生成期工作流：环境路由、能力探测、统一纳管 / 旧版非托管、manifest 与校验规则 | 页面引用图片 / 字体 / 自定义 CSS / JS / SVG 时按该文档执行；本场景是 Scene 环境，只走其 Scene 分支。 |
+| `/knowledge/custom-page-resource-contract.json` | 由 panelx-http-api 的 catalog 生成的资源接口契约子集（method / path / 字段 / 会话头） | 只读生成物，不得手改；`/script/scene-custom-page-resource.mjs` 据此发请求。 |
+| `/script/scene-custom-page-resource.mjs` | Scene 业务资源 helper：`list [--prefix <path>]`、`upload --file <local> [--resource-path <path>] [--overwrite]` | 能力探测与上传都走它；只用 `.scene` 会话，不登录、不读 Token、不发 `Authorization`、不做导出 / 导入。 |
+| `/script/validate-page-resources.mjs` | 内部资源机械校验器（与技能同源） | 受管页面写盘后校验；显式旧版模式加 `--legacy-unmanaged`。 |
 
 ## 工作流程建议
 1. **检查现有交付物**：如果用户在会话前已导入交付物（如 `index.html`），先阅读其内容，理解已有结构/样式/逻辑，再在此基础上满足用户的新需求或改动。

@@ -67,7 +67,7 @@ const combined = listA.map(a => ({
   - Tailwind: `<script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>`
   - Loading: `<script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>`
 - **语言**：所有界面文字使用简体中文
-- **内部资源**：发现业务资源后，先调用一次 `custom-page-resource list` 进行能力探测：可用则自动统一纳管；仅 HTTP `404` / `405` 或协议不匹配时才让用户选择升级或旧版非托管模式。`401` / `403`、其他 `4xx`、网络错误、超时、`5xx` 不能触发降级；旧版模式不写 manifest。统一纳管时，图片 / 字体 / 自定义 CSS / JS / SVG 及第三方静态 CDN 依赖都按 `references/internal-resources.md` 处理；系统资源（`data-cdp-resource` 与 `references/system-resources.json` 的 legacy URL）不进 manifest、不上传。
+- **内部资源**：先看工作区根有没有 `.scene`。无 `.scene` 时，**CLI 分支只在工作区交付 HTML**，不查找/加载 `panelx-http-api`，不调用资源服务或上传；有 `.scene` 时**不要登录、不要调用 CLI**，读取 `.cdp/resource-context.json` 并用 `/script/scene-custom-page-resource.mjs list` 验证 webPage 与 Scene 会话。统一纳管时按 `references/internal-resources.md` 处理；**复用是可选决策**，由你按资源内容、版本、依赖闭包与路径语义决定，不能机械强制复用。系统资源不进 manifest、不上传。
 - **重要**：只返回纯 HTML 代码，从 `<!DOCTYPE html>` 开始到 `</html>` 结束，不要包含任何其他内容
 
 ---

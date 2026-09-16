@@ -41,7 +41,7 @@ description: "Use when generating a single HTML page for VotaFoundry / SemFoundr
    - 先读 `frontend-design.md`，明确目的/受众/技术约束后确定明确审美方向并贯彻到底。
    - 用户未指定 UI 规范时遵循 `default-ui-design.md`；加载态参考 `wave-loading.md`。
    - 默认 `Tailwind CDN + Lucide + (看板场景加 ECharts)`；配色跟随 CDP 主题。
-5. **内部资源**（页面引用图片 / 字体 / 自定义 CSS / JS / SVG 时必做）：先按 `references/internal-resources.md` 做 `custom-page-resource list` 能力探测；可用时走统一纳管批次，不可用时只按规定分支处理。系统资源清单见 `references/system-resources.json`；写盘后用对应模式的 `scripts/validate-page-resources.mjs` 校验。
+5. **内部资源**（页面引用图片 / 字体 / 自定义 CSS / JS / SVG 时必读 `references/internal-resources.md`）：无 `.scene` 时只在工作区交付 HTML，不查找或调用 `panelx-http-api`、不自行上传；有 `.scene` 时才用 `/script/scene-custom-page-resource.mjs list` 进入统一纳管批次（不登录、不调用 CLI）。服务器已有资源是否复用由 agent 按场景自主决定。系统资源清单见 `references/system-resources.json`；Scene 托管页面写盘后用对应模式的 `validate-page-resources.mjs` 校验。
 6. **分支执行要点**：
    - **数据页面**：熟读 `panelx-sdk.md`；CDP 主题同步 + 动作注册为必选；PanelXSdkProxy 由 CDP 宿主注入，页面直接用全局 `PanelXSdkProxy` 构造函数初始化（`busDomainCode` 必填），禁止 script src/本地脚本/preload 加载。
    - **页面入口**：熟读 `cdp-sdk-guide.md`「自定义 Shell 开发指南」；仅用 CDP-SDK，默认不加载 PanelX、不做动作注册（除非明确要求）。

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "source": "panelx-http-api/references/endpoint-catalog.json",
+  "sessionHeader": "X-Scene-Session-Id",
+  "operations": {
+    "list": {
+      "name": "listCustomPageResources",
+      "method": "GET",
+      "path": "/wp-cdn/api/listFiles",
+      "location": "query",
+      "required": [],
+      "optional": [
+        "prefix"
+      ],
+      "response": "respond-dto"
+    },
+    "upload": {
+      "name": "uploadCustomPageResource",
+      "method": "POST",
+      "path": "/wp-cdn/api/uploadFile",
+      "location": "multipart",
+      "required": [
+        "file"
+      ],
+      "optional": [
+        "resourcePath",
+        "overwrite"
+      ],
+      "response": "respond-dto"
+    }
+  }
+}

@@ -1,8 +1,6 @@
 # 内部资源（custom page internal resources）生成期工作流
 
-页面里除宿主提供的系统资源之外的**业务资源**（图片、字体、自定义 CSS/JS、SVG 等），在资源接口可用时统一走「内部资源」：上传后在页面里用**恰好一个** manifest 声明。
-
-> **鉴权前置**：登录、鉴权、请求头、接口地址一律按 `panelx-http-api` 技能执行，本文件不重复其步骤。
+页面里除宿主提供的系统资源之外的**业务资源**（图片、字体、自定义 CSS/JS、SVG 等），仅在 Scene 资源接口可用时统一走「内部资源」：上传后在页面里用**恰好一个** manifest 声明。
 
 ## 一、资源分类
 
@@ -21,19 +19,45 @@
 <!-- legacy 形式同样算系统资源：src="/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js" -->
 ```
 
-## 二、能力探测与模式选择
+## 二、环境路由与能力探测
 
-页面发现业务资源后，先调用一次 `custom-page-resource list` 进行能力探测。
+先看工作区根目录有没有 `.scene`：**没有**走 CLI 本地交付，**有**走 Scene 统一纳管。资源接口、复用、批次、manifest 与校验只适用于 Scene 分支。
 
-- `ok:true`：直接进入统一纳管模式，不询问用户。
-- HTTP `404` / `405`，或成功 HTTP 响应但不符合 RespondDto 协议：让用户选择升级后重试，或旧版非托管模式。
-- `401` / `403`、其他 `4xx`、网络错误、超时、`5xx`：按鉴权或服务错误处理，不降级。
+不能猜测 CDP 部署根或版本，也不加入页面运行时探测、双轨资源引用或自动降级。一律按结构化 `ok`、HTTP `status`、`code` / `state` 判断，不匹配错误文案。
 
-按 CLI 的结构化 `ok`、HTTP `status`、`code` / `state` 判断，不匹配错误文案。不能猜测 CDP 部署根或版本，也不加入页面运行时探测、双轨资源引用或自动降级。
+### 无 `.scene`：CLI 分支
+
+**CLI 分支只在工作区交付 HTML**。不查找、不加载 `panelx-http-api` 技能，不调用 `custom-page-resource list` / `upload` 或任何资源服务，也不自行部署、上传或写受管 manifest。服务端资源管理仅在 Scene 分支执行；若用户明确另行要求服务器资源操作，再由独立的 HTTP 技能处理。
+
+### 有 `.scene`：Scene 分支
+
+Scene 会话不登录、不读取 Token、不调用 `custom-page-resource` CLI，只用随技能分发的轻量 helper（技能内 `scripts/scene-custom-page-resource.mjs`，场景工作区为 `/script/scene-custom-page-resource.mjs`）。
+
+1. **读资源上下文** `.cdp/resource-context.json`（`version: 1`、`baseUrl`、`businessDomain`）：
+   - **不存在** → 当前 CDP 不支持业务资源管理：**不调用 listFiles**，直接让用户选择升级后重试或旧版非托管模式；
+   - **存在但非法**（JSON 无效、`version` 不为 1、缺 `baseUrl` 或 `businessDomain`）→ 停止并报告宿主上下文错误，**不降级**；
+   - **存在且合法** → 判定 CDP 支持业务资源管理，继续第 2 步。
+2. **能力探测**只验证 webPage 资源接口与 Scene 会话：
+
+```powershell
+node /script/scene-custom-page-resource.mjs list [--prefix <path>]
+```
+
+- `ok:true`：进入统一纳管模式，不再提醒用户人工确认 CDP 版本。
+- HTTP `404` / `405` 或协议不匹配：webPage 资源能力不可用，让用户选择升级后重试或旧版非托管模式。
+- 会话无效、`401` / `403`、网络错误、超时、`5xx`：暂停整批，不降级，也不用 CLI 重新探测。
+
+helper 只提供两个操作，`list` 之外的上传也走它：
+
+```powershell
+node /script/scene-custom-page-resource.mjs upload --file <local-file> [--resource-path <path>] [--overwrite]
+```
+
+`--overwrite` 与 CLI 的 `overwrite` 语义一致，Scene 侧不额外要求人工确认。helper 不做登录、导出、导入、资源分类、manifest 写入和重试调度；机械校验仍用 `/script/validate-page-resources.mjs`。接口 method、path、字段与会话头以 `custom-page-resource-contract.json`（由 `panelx-http-api` 的 catalog 生成，勿手改）为准。
 
 ### 统一纳管模式
 
-继续下方的 list、复用、上传、唯一 manifest 与托管校验流程。交付时提醒：请确认 CDP ≥ 1.20.0，且 webPage ≥ 1.4.2 的资源接口已验证可用。
+继续下方的 list、复用、上传、唯一 manifest 与托管校验流程（Scene 分支的 list/upload 用上面的 helper，其余步骤相同）。交付时提醒：请确认 CDP ≥ 1.20.0，且 webPage ≥ 1.4.2 的资源接口已验证可用。
 
 ### 旧版非托管模式
 
@@ -43,6 +67,8 @@
 node skills/generating-votafoundry-single-pages/scripts/validate-page-resources.mjs --legacy-unmanaged index.html
 ```
 
+Scene 分支下校验器路径为 `/script/validate-page-resources.mjs`，参数相同。
+
 交付时说明：该模式不保证统一迁移、内网离线部署和平台依赖分析。
 
 ## 三、一个页面 = 一个批次（统一纳管模式）
@@ -51,8 +77,8 @@ node skills/generating-votafoundry-single-pages/scripts/validate-page-resources.
 
 1. **发现**：静态扫描 HTML/CSS 的引用 —— `link[href]`、`src`、`srcset`、`poster`、`data`、样式表里的 `url()` / `@import`。**JS 不解析**：静态可知的 JS 路径由你**手工列出**并纳入本批次。
 2. **分类**：按上表剔除系统资源与内联/服务 URL；第三方静态资源先下载，连同其依赖闭包一起作为业务资源。
-3. **一次完整 list**：调用一次完整的 `custom-page-resource list`（分页取全量，不要截断），拿到服务器现有资源及其 `etag`。
-4. **etag 复用**：只有内容与 `etag` 兼容才复用已有内容。CSS/JS/HTML/SVG 存在**依赖闭包**：闭包内任一文件变化就不能半复用，整组重传。其余一律按「缺失」处理。
+3. **一次完整 list**：调用 Scene helper 的完整 `list`（分页取全量，不要截断），拿到服务器现有资源及其 `etag`。
+4. **自主决定复用**：**复用是可选决策**，不是看到同名或兼容 `etag` 就必须复用。根据页面需求、内容/版本、依赖闭包和路径语义自行判断；决定复用时，必须确认内容与 `etag` 兼容。CSS/JS/HTML/SVG 的闭包内任一文件变化时不能半复用；决定不复用则分配无碰撞的新 `resourcePath` 并上传整组。
 5. **分配 resourcePath**：可读、无碰撞（不要撞上服务器上别的资源），相对页面根，Unicode/空格原样写，不要 `%` 编码。
 6. **顺序上传**缺失文件：逐个上传，**不覆盖**已有资源。
 7. **收集结果**：只收集**上传成功**返回的最终路径。

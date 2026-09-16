@@ -687,7 +687,7 @@ console.log('已展开:', Array.from(state.expandedIds));
 
 - **样式建议**：使用 Tailwind CSS 本地资源协议声明
   `<script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>`
-- **内部资源**：发现业务资源后，先调用一次 `custom-page-resource list` 进行能力探测：可用则自动统一纳管；仅 HTTP `404` / `405` 或协议不匹配时才让用户选择升级或旧版非托管模式。`401` / `403`、其他 `4xx`、网络错误、超时、`5xx` 不能触发降级；旧版模式不写 manifest。统一纳管时，图片 / 字体 / 自定义 CSS / JS / SVG 及第三方静态 CDN 依赖都按 `references/internal-resources.md` 处理；系统资源（`data-cdp-resource` 与 `references/system-resources.json` 的 legacy URL）不进 manifest、不上传。
+- **内部资源**：先看工作区根有没有 `.scene`。无 `.scene` 时，**CLI 分支只在工作区交付 HTML**，不查找/加载 `panelx-http-api`，不调用资源服务或上传；有 `.scene` 时**不要登录、不要调用 CLI**，读取 `.cdp/resource-context.json` 并用 `/script/scene-custom-page-resource.mjs list` 验证 webPage 与 Scene 会话。统一纳管时按 `references/internal-resources.md` 处理；**复用是可选决策**，由你按资源内容、版本、依赖闭包与路径语义决定，不能机械强制复用。系统资源不进 manifest、不上传。
 - **图标资源加载规则（强制）**：只复用宿主共享实例 `window.semApp?.ui?.lucide`；禁止任何 CDN fallback
 - **明确禁令**：禁止动态创建 `<script>` 加载 Lucide CDN；禁止 `@latest`、`unpkg.com` 或任何 CDN 地址；禁止为了“自包含页面”或“快速交付”跳过宿主资源判断；“自包含页面”不等于“忽略宿主共享资源”
 - **图标渲染**：DOM 中静态 `data-lucide` 渲染后必须调用可用实例的 `createIcons()`；动态插入、替换或切换图标后，必须再次执行渲染
