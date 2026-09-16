@@ -2,7 +2,7 @@
 /**
  * 单页「内部资源」校验器 —— 静态检查，只用 Node 标准库，无依赖。
  *
- *   node skills/generating-votafoundry-single-pages/scripts/validate-page-resources.mjs <页面.html> [更多.css ...]
+ *   node skills/generating-votafoundry-single-pages/scripts/validate-page-resources.mjs [--legacy-unmanaged] <页面.html> [更多.css ...]
  *
  * 校验（不解析动态 JS）：
  *   - 受管页面恰好 1 个 <script type="application/json" data-cdp-internal-resources> manifest
@@ -69,7 +69,7 @@ function canonicalError(p) {
   return null;
 }
 
-function validate(files) {
+function validate(files, { legacyUnmanaged = false } = {}) {
   const failures = [];
   const fail = (m) => failures.push(m);
   const [pageEntry, ...extraEntries] = files;
@@ -83,6 +83,10 @@ function validate(files) {
   const manifests = [];
   for (const m of html.matchAll(SCRIPT_RE)) {
     if (HAS_MANIFEST_ATTR.test(m[1])) manifests.push({ attrs: m[1], body: m[2] });
+  }
+  if (legacyUnmanaged) {
+    if (manifests.length !== 0) fail('旧版非托管页面不得包含内部资源 manifest');
+    return failures;
   }
   if (manifests.length !== 1) {
     fail(
@@ -227,9 +231,11 @@ function validate(files) {
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
-  const files = process.argv.slice(2);
+  const input = process.argv.slice(2);
+  const legacyUnmanaged = input[0] === '--legacy-unmanaged';
+  const files = legacyUnmanaged ? input.slice(1) : input;
   if (files.length === 0) {
-    console.error('用法: node validate-page-resources.mjs <页面.html> [更多.css ...]');
+    console.error('用法: node validate-page-resources.mjs [--legacy-unmanaged] <页面.html> [更多.css ...]');
     process.exit(2);
   }
   const missing = files.find((f) => !statSync(resolve(f), { throwIfNoEntry: false })?.isFile());
@@ -239,7 +245,7 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
   }
   let failures;
   try {
-    failures = validate(files);
+    failures = validate(files, { legacyUnmanaged });
   } catch (e) {
     failures = [`校验异常：${e.message}`];
   }

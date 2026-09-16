@@ -22,7 +22,7 @@ const manifestTag = (resources) =>
   `<script type="application/json" data-cdp-internal-resources>${JSON.stringify({ version: 1, resources })}</script>`;
 const encRef = (p) => p.split('/').map(encodeURIComponent).join('/');
 
-function runPage(files, entry = 'index.html') {
+function runPage(files, entry = 'index.html', options = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'cdp-page-res-'));
   for (const [rel, content] of Object.entries(files)) {
     const abs = join(dir, rel);
@@ -30,7 +30,10 @@ function runPage(files, entry = 'index.html') {
     writeFileSync(abs, content, 'utf8');
   }
   const extra = Object.keys(files).filter((r) => r !== entry).map((r) => join(dir, r));
-  return spawnSync(process.execPath, [VALIDATOR, join(dir, entry), ...extra], { encoding: 'utf8' });
+  const args = [VALIDATOR];
+  if (options.legacyUnmanaged) args.push('--legacy-unmanaged');
+  args.push(join(dir, entry), ...extra);
+  return spawnSync(process.execPath, args, { encoding: 'utf8' });
 }
 
 const out = (r) => `${r.stdout}${r.stderr}`;
@@ -89,6 +92,16 @@ test('第三方静态 CDN 资源必须先纳管，导航链接不受此规则约
 
 test('空 manifest 合法（该页没有业务资源）', () => {
   assertPass(runPage({ 'index.html': page(manifestTag([])) }));
+});
+
+test('旧版非托管模式允许旧资源引用但拒绝 manifest', () => {
+  const legacy = page('', '<script src="https://cdn.example.test/legacy.js"></script>');
+  assertPass(runPage({ 'index.html': legacy }, 'index.html', { legacyUnmanaged: true }));
+
+  assertFail(
+    runPage({ 'index.html': page(manifestTag([])) }, 'index.html', { legacyUnmanaged: true }),
+    /旧版非托管页面不得包含内部资源 manifest/,
+  );
 });
 
 test('manifest 条目可以是含 resourcePath 的对象，未引用的条目也允许', () => {
