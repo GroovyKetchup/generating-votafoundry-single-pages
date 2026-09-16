@@ -1,6 +1,6 @@
 # 内部资源（custom page internal resources）生成期工作流
 
-页面里除宿主提供的系统资源之外的**业务资源**（图片、字体、自定义 CSS/JS、SVG 等），统一走「内部资源」：上传后在页面里用**恰好一个** manifest 声明。
+页面里除宿主提供的系统资源之外的**业务资源**（图片、字体、自定义 CSS/JS、SVG 等），在资源接口可用时统一走「内部资源」：上传后在页面里用**恰好一个** manifest 声明。
 
 > **鉴权前置**：登录、鉴权、请求头、接口地址一律按 `panelx-http-api` 技能执行，本文件不重复其步骤。
 
@@ -21,7 +21,31 @@
 <!-- legacy 形式同样算系统资源：src="/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js" -->
 ```
 
-## 二、一个页面 = 一个批次
+## 二、能力探测与模式选择
+
+页面发现业务资源后，先调用一次 `custom-page-resource list` 进行能力探测。
+
+- `ok:true`：直接进入统一纳管模式，不询问用户。
+- HTTP `404` / `405`，或成功 HTTP 响应但不符合 RespondDto 协议：让用户选择升级后重试，或旧版非托管模式。
+- `401` / `403`、其他 `4xx`、网络错误、超时、`5xx`：按鉴权或服务错误处理，不降级。
+
+按 CLI 的结构化 `ok`、HTTP `status`、`code` / `state` 判断，不匹配错误文案。不能猜测 CDP 部署根或版本，也不加入页面运行时探测、双轨资源引用或自动降级。
+
+### 统一纳管模式
+
+继续下方的 list、复用、上传、唯一 manifest 与托管校验流程。交付时提醒：请确认 CDP ≥ 1.20.0，且 webPage ≥ 1.4.2 的资源接口已验证可用。
+
+### 旧版非托管模式
+
+不上传、不写 manifest，第三方静态资源可按旧方式引用。执行：
+
+```powershell
+node skills/generating-votafoundry-single-pages/scripts/validate-page-resources.mjs --legacy-unmanaged index.html
+```
+
+交付时说明：该模式不保证统一迁移、内网离线部署和平台依赖分析。
+
+## 三、一个页面 = 一个批次（统一纳管模式）
 
 同一页面的资源**作为一个批次**处理，顺序执行，不做并发：
 
@@ -35,7 +59,7 @@
 8. **一次性写 HTML + manifest**：manifest 只列成功落地的业务路径。
 9. **再 list/校验一次**：确认服务器侧与 manifest 一致。
 
-## 三、manifest 写法
+## 四、manifest 写法（统一纳管模式）
 
 ```html
 <script type="application/json" data-cdp-internal-resources>{"version":1,"resources":["图片/背景 图.png","assets/app.css"]}</script>
@@ -46,18 +70,18 @@
 - 条目可以是路径字符串，也可以是含 `resourcePath` 的对象（例如附带 `etag`）。
 - 页面里引用的每个业务路径都必须能在 manifest 中找到；只被 JS 动态拼接的路径不在静态校验范围内，因此必须由你手工列进 manifest。
 
-## 四、错误语义
+## 五、错误语义（统一纳管模式）
 
 - **单文件冲突 / 载荷过大**：跳过该文件，其余**独立**文件继续；本轮结束后把失败文件放进**下一轮**重试。不在客户端加第二个 64MiB 上限——服务端载荷限制是唯一真源。
 - **系统级错误**（鉴权失效、5xx、网络中断等）：**暂停整批**，不要继续上传，也不要写 manifest。
-- 不写死错误文案：按服务端 **HTTP 状态 + message** 自行判断，不做字符串精确匹配。
+- 不写死错误文案：按服务端的 **HTTP 状态 + 结构化错误字段** 判断，不做字符串精确匹配。
 - 不做强制并发 / 自动重试引擎，也不做运行期错误 UI。
 
-## 五、accessPath
+## 六、accessPath
 
 `accessPath` 只是**检查用**数据（人工核对服务器上落地的资源）。**永远不要**把它写进 HTML、CSS、JS 或 manifest。
 
-## 六、校验
+## 七、校验（统一纳管模式）
 
 ```powershell
 node skills/generating-votafoundry-single-pages/scripts/validate-page-resources.mjs index.html assets/app.css

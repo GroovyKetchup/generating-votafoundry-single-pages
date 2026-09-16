@@ -46,7 +46,7 @@ if ($out -match 'PRESSURE_RESULT: PASS') { Write-Host 'tier2 PASS' } else { Writ
 node --test tests\validate-page-resources.test.mjs
 ```
 
-覆盖 `skills/generating-votafoundry-single-pages/scripts/validate-page-resources.mjs`：恰好一个 `data-cdp-internal-resources` manifest、路径规范与去重、
+覆盖 `skills/generating-votafoundry-single-pages/scripts/validate-page-resources.mjs`：统一纳管与显式旧版非托管模式互斥；统一纳管时恰好一个 `data-cdp-internal-resources` manifest、路径规范与去重、
 引用必须包含在 manifest 中、根绝对引用 / 逃出受管根的 `..` / 非法百分号编码被拒、系统资源与外部 URL 被排除、系统资源注册表为单一来源。退出码非 0 = FAIL。
 
 ## 失败即重构（把漏洞堵回技能）

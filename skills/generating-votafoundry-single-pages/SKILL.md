@@ -41,7 +41,7 @@ description: "Use when generating a single HTML page for VotaFoundry / SemFoundr
    - 先读 `frontend-design.md`，明确目的/受众/技术约束后确定明确审美方向并贯彻到底。
    - 用户未指定 UI 规范时遵循 `default-ui-design.md`；加载态参考 `wave-loading.md`。
    - 默认 `Tailwind CDN + Lucide + (看板场景加 ECharts)`；配色跟随 CDP 主题。
-5. **内部资源**（页面引用图片 / 字体 / 自定义 CSS / JS / SVG 时必做）：按 `references/internal-resources.md` 走「一个页面 = 一个批次」流程；系统资源清单见 `references/system-resources.json`；写盘后用 `scripts/validate-page-resources.mjs` 校验。
+5. **内部资源**（页面引用图片 / 字体 / 自定义 CSS / JS / SVG 时必做）：先按 `references/internal-resources.md` 做 `custom-page-resource list` 能力探测；可用时走统一纳管批次，不可用时只按规定分支处理。系统资源清单见 `references/system-resources.json`；写盘后用对应模式的 `scripts/validate-page-resources.mjs` 校验。
 6. **分支执行要点**：
    - **数据页面**：熟读 `panelx-sdk.md`；CDP 主题同步 + 动作注册为必选；PanelXSdkProxy 由 CDP 宿主注入，页面直接用全局 `PanelXSdkProxy` 构造函数初始化（`busDomainCode` 必填），禁止 script src/本地脚本/preload 加载。
    - **页面入口**：熟读 `cdp-sdk-guide.md`「自定义 Shell 开发指南」；仅用 CDP-SDK，默认不加载 PanelX、不做动作注册（除非明确要求）。
@@ -52,8 +52,8 @@ description: "Use when generating a single HTML page for VotaFoundry / SemFoundr
 ### 通用
 - 单文件 HTML；但"单文件"≠忽略宿主共享资源，资源策略优先复用宿主能力。
 - 资源声明：Tailwind CSS、wave-loading 必须使用 `data-cdp-resource` + `data-cdp-resource-version` 固定版本声明；ECharts 出现时同样要求；资源标签必须早于依赖脚本。
-- **内部资源**：受管页面恰好一个 `<script type="application/json" data-cdp-internal-resources>{"version":1,"resources":[...]}</script>`（空数组合法）；业务路径相对页面根、可读原样（Unicode/空格），无碰撞、无重复。流程与错误语义见 `references/internal-resources.md`。
-- **第三方静态依赖默认纳管**：外部 CDN 的脚本、样式、字体、图片等先下载并上传为业务资源；只有导航、接口等非静态载入 URL 可保留外链。
+- **统一纳管模式的内部资源**：受管页面恰好一个 `<script type="application/json" data-cdp-internal-resources>{"version":1,"resources":[...]}</script>`（空数组合法）；业务路径相对页面根、可读原样（Unicode/空格），无碰撞、无重复。流程与错误语义见 `references/internal-resources.md`。
+- **第三方静态依赖默认纳管**：统一纳管模式下，外部 CDN 的脚本、样式、字体、图片等先下载并上传为业务资源；只有导航、接口等非静态载入 URL 可保留外链。用户明确选择旧版非托管模式时不写 manifest，改用 `--legacy-unmanaged` 校验。
 - **系统资源不进内部资源**：`data-cdp-resource` 引用与 `references/system-resources.json` 里的精确 legacy URL（如 `<script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>`）只由宿主提供，**不得**写进 manifest，也不得上传。
 - `accessPath` 只是检查用数据，**禁止**写进 HTML / CSS / JS / manifest。
 - 界面文字简体中文；不暴露业务域/面板编号等技术信息。

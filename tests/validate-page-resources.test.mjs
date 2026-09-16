@@ -213,7 +213,13 @@ test('系统资源注册表是单一来源且与技能文档声明一致', () =>
   assert.match(refDoc, /data-cdp-resource/);
   assert.match(refDoc, /system-resources\.json/);
   assert.match(refDoc, /accessPath/);
+  assert.match(refDoc, /先调用一次 `custom-page-resource list` 进行能力探测/);
+  assert.match(refDoc, /--legacy-unmanaged/);
+  assert.match(refDoc, /CDP.*1[.]20[.]0/);
+  assert.match(refDoc, /webPage.*1[.]4[.]2/);
   for (const prompt of ['normal-generator.md', 'databoard-generator.md', 'custom-shell-generator.md']) {
-    assert.match(readFileSync(join(SKILL, 'references', 'prompts', prompt), 'utf8'), /第三方静态 CDN 依赖/);
+    const content = readFileSync(join(SKILL, 'references', 'prompts', prompt), 'utf8');
+    assert.match(content, /第三方静态 CDN 依赖/);
+    assert.match(content, /先调用一次 `custom-page-resource list` 进行能力探测/);
   }
 });

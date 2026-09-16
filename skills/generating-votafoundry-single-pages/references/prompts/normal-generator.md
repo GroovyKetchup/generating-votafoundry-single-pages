@@ -67,7 +67,7 @@ const combined = listA.map(a => ({
   - Tailwind: `<script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>`
   - Loading: `<script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>`
 - **语言**：所有界面文字使用简体中文
-- **内部资源**：页面引用的图片 / 字体 / 自定义 CSS / JS / SVG，以及第三方静态 CDN 依赖，都按 `references/internal-resources.md` 走「一个页面 = 一个批次」流程并纳管；页面里恰好写一个 `<script type="application/json" data-cdp-internal-resources>{"version":1,"resources":[...]}</script>`（没有业务资源时写空数组）。系统资源（`data-cdp-resource` 与 `references/system-resources.json` 的 legacy URL）不进 manifest、不上传。
+- **内部资源**：发现业务资源后，先调用一次 `custom-page-resource list` 进行能力探测：可用则自动统一纳管；仅 HTTP `404` / `405` 或协议不匹配时才让用户选择升级或旧版非托管模式。`401` / `403`、其他 `4xx`、网络错误、超时、`5xx` 不能触发降级；旧版模式不写 manifest。统一纳管时，图片 / 字体 / 自定义 CSS / JS / SVG 及第三方静态 CDN 依赖都按 `references/internal-resources.md` 处理；系统资源（`data-cdp-resource` 与 `references/system-resources.json` 的 legacy URL）不进 manifest、不上传。
 - **重要**：只返回纯 HTML 代码，从 `<!DOCTYPE html>` 开始到 `</html>` 结束，不要包含任何其他内容
 
 ---
