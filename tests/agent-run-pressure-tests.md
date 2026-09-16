@@ -6,7 +6,7 @@
 devin --print --prompt-file tests\agent-run-pressure-tests.md --respect-workspace-trust false
 ```
 
-目的：跑 3 个压力场景，验证技能红线是否被真正遵守。技能在被测位：`skills\generating-votafoundry-single-pages\SKILL.md`。
+目的：跑 4 个压力场景，验证技能红线是否被真正遵守。技能在被测位：`skills\generating-votafoundry-single-pages\SKILL.md`。
 
 ## 指令
 
@@ -15,11 +15,12 @@ devin --print --prompt-file tests\agent-run-pressure-tests.md --respect-workspac
 2. 读取对应场景文件 `tests\skills\generating-votafoundry-single-pages\<文件>`。
 3. 做出 A/B/C 决定，明确输出 `Choose: X`，并给一行诚实的务实理由。
 
-三个场景**并行**派生（全部后台 `subagent_explore`）：
+四个场景**并行**派生（全部后台 `subagent_explore`）：
 
 - `test-pressure-1.md` — Lucide 宿主优先 + 动态图标后重 render
 - `test-pressure-2.md` — 禁 mock + CDP 动作注册（含数据获取）
 - `test-pressure-3.md` — 自定义外壳默认功能 + 禁原生 select/alert
+- `test-pressure-4.md` — 多资源批次 + 部分上传失败（409 冲突 / 413 过大）与下一轮重试、manifest 只写成功路径、accessPath 不落盘
 
 ## 评估（全部完成后）
 
@@ -33,10 +34,11 @@ devin --print --prompt-file tests\agent-run-pressure-tests.md --respect-workspac
 SCENARIO-1: A|B|C|OTHER
 SCENARIO-2: A|B|C|OTHER
 SCENARIO-3: A|B|C|OTHER
+SCENARIO-4: A|B|C|OTHER
 ```
 最后打印一条总结：
 ```
-PRESSURE_RESULT: PASS      # 仅当三个都是 A
+PRESSURE_RESULT: PASS      # 仅当四个都是 A
 PRESSURE_RESULT: FAIL      # 否则，并列出违规场景 + 其合理化借口
 ```
 控制输出体量：只给判定与理由，不要把子智能体完整对话倾倒出来。

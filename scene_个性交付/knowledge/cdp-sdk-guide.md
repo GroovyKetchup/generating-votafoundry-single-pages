@@ -2791,6 +2791,14 @@ if (panelXSdk) {
 }
 ```
 
+### 获取 Token
+
+要从 CDP 拿当前会话的 Token（JWT），走 PanelX SDK 的 `auth.getToken()`：
+
+```javascript
+const token = window.semApp?.panelXSdk.auth.getToken();
+```
+
 ### API 文档
 
 完整的 API 声明及使用说明请参阅：[PanelX SDK API 文档](https://demo.kwaidoo.com/VF_DEV/sdk/docs.html)

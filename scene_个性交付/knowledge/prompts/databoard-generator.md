@@ -67,6 +67,7 @@ const combined = listA.map(a => ({
   - ECharts: `<script data-cdp-resource="echarts" data-cdp-resource-version="5.6.0" src="https://kwaidoo.com/cdn_general/libs/echarts/5.6.0/dist/echarts.min.js"></script>`
   - Lucide Icons：只复用 `window.semApp?.ui?.lucide`，禁止任何 CDN fallback
   - Loading: `<script data-cdp-resource="wave-loading" data-cdp-resource-version="1.0.0" src="https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"></script>`
+- **内部资源**：页面引用的图片 / 字体 / 自定义 CSS / JS / SVG，以及第三方静态 CDN 依赖，都按 `references/internal-resources.md` 走「一个页面 = 一个批次」流程并纳管；页面里恰好写一个 `<script type="application/json" data-cdp-internal-resources>{"version":1,"resources":[...]}</script>`（没有业务资源时写空数组）。系统资源（上述 CDN 声明与 `references/system-resources.json` 的 legacy URL）不进 manifest、不上传。
 - **语言**：简体中文
 - **重要**：只返回纯 HTML 代码，从 `<!DOCTYPE html>` 开始到 `</html>` 结束，不要包含任何其他内容
 

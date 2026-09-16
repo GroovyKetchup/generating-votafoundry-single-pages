@@ -687,6 +687,7 @@ console.log('已展开:', Array.from(state.expandedIds));
 
 - **样式建议**：使用 Tailwind CSS 本地资源协议声明
   `<script data-cdp-resource="tailwindcss" data-cdp-resource-version="3.4.17" src="https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"></script>`
+- **内部资源**：页面引用的图片 / 字体 / 自定义 CSS / JS / SVG，以及第三方静态 CDN 依赖，都按 `references/internal-resources.md` 走「一个页面 = 一个批次」流程并纳管；页面里恰好写一个 `<script type="application/json" data-cdp-internal-resources>{"version":1,"resources":[...]}</script>`（没有业务资源时写空数组）。系统资源（`data-cdp-resource` 与 `references/system-resources.json` 的 legacy URL）不进 manifest、不上传。
 - **图标资源加载规则（强制）**：只复用宿主共享实例 `window.semApp?.ui?.lucide`；禁止任何 CDN fallback
 - **明确禁令**：禁止动态创建 `<script>` 加载 Lucide CDN；禁止 `@latest`、`unpkg.com` 或任何 CDN 地址；禁止为了“自包含页面”或“快速交付”跳过宿主资源判断；“自包含页面”不等于“忽略宿主共享资源”
 - **图标渲染**：DOM 中静态 `data-lucide` 渲染后必须调用可用实例的 `createIcons()`；动态插入、替换或切换图标后，必须再次执行渲染

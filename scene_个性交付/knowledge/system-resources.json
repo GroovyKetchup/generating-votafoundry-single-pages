@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "note": "系统资源单一来源：data-cdp-resource 名称 + 精确 legacy URL。系统资源由 CDP 宿主提供，不得进入内部资源 manifest，也不得进入上传流程。新增/升级系统资源只改本文件。",
+  "resources": [
+    {
+      "name": "tailwindcss",
+      "version": "3.4.17",
+      "urls": [
+        "/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js",
+        "https://kwaidoo.com/cdn_general/libs/tailwindcss/3.4.17/tailwindcss.min.js"
+      ]
+    },
+    {
+      "name": "wave-loading",
+      "version": "1.0.0",
+      "urls": [
+        "/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js",
+        "https://kwaidoo.com/cdn_general/libs/@generalui/wave-loading/1.0.0/wave-loading.js"
+      ]
+    },
+    {
+      "name": "echarts",
+      "version": "5.6.0",
+      "urls": [
+        "/cdn_general/libs/echarts/5.6.0/dist/echarts.min.js",
+        "https://kwaidoo.com/cdn_general/libs/echarts/5.6.0/dist/echarts.min.js"
+      ]
+    }
+  ]
+}

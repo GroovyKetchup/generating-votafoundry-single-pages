@@ -38,7 +38,16 @@ $out = devin --print --prompt-file tests\agent-run-pressure-tests.md --respect-w
 if ($out -match 'PRESSURE_RESULT: PASS') { Write-Host 'tier2 PASS' } else { Write-Host 'tier2 FAIL'; exit 1 }
 ```
 
-> 注：Tier 2 每次会派生 3 个 `subagent_explore`，按子智能体独立计费。改动技能红线后建议至少跑一次；常规提交可只跑 Tier 1。
+> 注：Tier 2 每次会派生 4 个 `subagent_explore`，按子智能体独立计费。改动技能红线后建议至少跑一次；常规提交可只跑 Tier 1。
+
+## Tier 1.5 — 内部资源校验器确定性测试（Node，无依赖）
+
+```powershell
+node --test tests\validate-page-resources.test.mjs
+```
+
+覆盖 `skills/generating-votafoundry-single-pages/scripts/validate-page-resources.mjs`：恰好一个 `data-cdp-internal-resources` manifest、路径规范与去重、
+引用必须包含在 manifest 中、根绝对引用 / 逃出受管根的 `..` / 非法百分号编码被拒、系统资源与外部 URL 被排除、系统资源注册表为单一来源。退出码非 0 = FAIL。
 
 ## 失败即重构（把漏洞堵回技能）
 
@@ -54,4 +63,5 @@ if ($out -match 'PRESSURE_RESULT: PASS') { Write-Host 'tier2 PASS' } else { Writ
 | `run-validation.ps1` | Tier 1 确定性门禁 |
 | `agent-run-pressure-tests.md` | Tier 2 压力测试编排（`devin -p` 使用） |
 | `skills/generating-votafoundry-single-pages/` | 技能交付源（不随 tests 一起交付） |
-| `skills/.../test-pressure-*.md` | 3 个压力场景，实际位于 `tests\skills\generating-votafoundry-single-pages\` |
+| `skills/.../test-pressure-*.md` | 4 个压力场景，实际位于 `tests\skills\generating-votafoundry-single-pages\` |
+| `validate-page-resources.test.mjs` | 内部资源校验器确定性测试（Tier 1.5） |
